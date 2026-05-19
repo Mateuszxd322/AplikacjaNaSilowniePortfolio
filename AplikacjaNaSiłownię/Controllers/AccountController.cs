@@ -47,13 +47,20 @@ namespace AplikacjaNaSiłownię.Controllers
                     return View(model);
                 }
 
+                // ZABEZPIECZENIE PRZED BŁĘDEM WYŚCIGU (Race Condition):
+                // Ustawiamy IsApproved = model.Rola != "Trener" bezpośrednio w inicjalizatorze obiektu.
+                // Dzięki temu trener jest tworzony w bazie danych od razu z flagą 'false'. Zapobiega to przejściowemu
+                // zapisywaniu trenera z wartością domyślną 'true' w bazie, co mogłoby umożliwić zalogowanie się
+                // w czasie pomiędzy CreateAsync a późniejszym UpdateAsync (okno podatności), lub gdyby aplikacja
+                // uległa awarii w trakcie trwania metody.
                 var user = new ApplicationUser
                 {
                     UserName = model.Email,
                     Email = model.Email,
                     Imie = model.Imie,
                     Nazwisko = model.Nazwisko,
-                    Rola = model.Rola
+                    Rola = model.Rola,
+                    IsApproved = model.Rola != "Trener"
                 };
 
                 // TODO: W produkcji użyć silniejszych polityk haseł i dodatkowej walidacji złożoności po stronie serwera
@@ -73,9 +80,6 @@ namespace AplikacjaNaSiłownię.Controllers
 
                     if (model.Rola == "Trener")
                     {
-                        user.IsApproved = false;
-                        await _userManager.UpdateAsync(user); // Aktualizacja po przypisaniu ról dla pewności
-
                         // Powiadomienie wszystkich administratorów o nowej rejestracji trenera
                         var admins = await _userManager.GetUsersInRoleAsync("Admin");
                         foreach (var admin in admins)

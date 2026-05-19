@@ -81,6 +81,16 @@ namespace AplikacjaNaSiłownię.Services
                     _context.PlannedWorkouts.RemoveRange(workouts);
                 }
 
+                // KROK: Usunięcie powiadomień powiązanych z użytkownikiem (Zapobieganie osieroconym rekordom).
+                // Ponieważ powiadomienia (Notifications) są powiązane z użytkownikiem za pomocą UserId typu string,
+                // a nie twardego klucza obcego EF z automatyczną kaskadą, ich nieusunięcie skutkowałoby
+                // powstawaniem osieroconych rekordów i zaśmiecaniem bazy danych po skasowaniu użytkownika.
+                var notifications = await _context.Notifications.Where(n => n.UserId == userId).ToListAsync();
+                if (notifications.Count > 0)
+                {
+                    _context.Notifications.RemoveRange(notifications);
+                }
+
                 await _context.SaveChangesAsync();
                 await _userManager.DeleteAsync(user);
                 await transaction.CommitAsync();

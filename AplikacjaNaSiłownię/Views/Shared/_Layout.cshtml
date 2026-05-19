@@ -362,6 +362,27 @@
                     .catch(err => console.error("Błąd pobierania powiadomień:", err));
             }
 
+            // Pomocnicza funkcja do zabezpieczania tekstu przed atakami XSS (HTML Encoding).
+            // BEZPIECZEŃSTWO FRONTENDU (XSS Prevention):
+            // Ta funkcja koduje dynamiczne dane wejściowe z bazy danych przed ich wstrzyknięciem do 'innerHTML'.
+            // Zapobiega to wykonaniu kodu JavaScript (np. <script>alert(1)</script>) przesyłanego w tytułach lub treściach.
+            //
+            // SPECJALNE ZABEZPIECZENIE DLA SILNIKA RAZOR:
+            // Używamy ucieczek hex '\x22' (cudzysłów) oraz '\x27' (apostrof) zamiast literalnych znaków cudzysłowu i apostrofu.
+            // Zapobiega to błędnej interpretacji kodu JavaScript przez parser Razor w pliku .cshtml jako atrybutów tagów HTML,
+            // co w przeciwnym razie prowadziło do błędów kompilacji CS0426 oraz CS0246 podczas generowania widoku.
+            function escapeHtml(str) {
+                if (!str) return '';
+                var map = {
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '\x22': '&quot;',
+                    '\x27': '&#039;'
+                };
+                return String(str).replace(/[&<>\x22\x27]/g, function(m) { return map[m]; });
+            }
+
             // Tworzy elementy HTML dla pojedynczego powiadomienia i wstawia je do dropdowna.
             function addNotificationToList(notification, isNew) {
                 const list = document.getElementById('notificationList');
@@ -422,15 +443,16 @@
                 else if (notification.type === 'Trening') iconClass = 'bi-calendar-event-fill text-neon';
 
                 // Budujemy strukturę wewnętrzną HTML powiadomienia (w tym przycisk X do usuwania)
+                // Wszystkie dane wstrzykiwane z bazy danych są kodowane przy użyciu funkcji escapeHtml w celu zapobieżenia ataku XSS
                 item.innerHTML = `
                     <div class="d-flex align-items-start gap-2">
                         <i class="bi ${iconClass} fs-5 mt-1"></i>
                         <div class="flex-grow-1">
                             <div class="d-flex justify-content-between align-items-center">
-                                <strong class="text-white small">${notification.title}</strong>
-                                <span class="text-muted" style="font-size: 0.75rem;">${notification.createdAt}</span>
+                                <strong class="text-white small">${escapeHtml(notification.title)}</strong>
+                                <span class="text-muted" style="font-size: 0.75rem;">${escapeHtml(notification.createdAt)}</span>
                             </div>
-                            <p class="mb-0 text-gray-300 small mt-1" style="line-height: 1.25;">${notification.message}</p>
+                            <p class="mb-0 text-gray-300 small mt-1" style="line-height: 1.25;">${escapeHtml(notification.message)}</p>
                         </div>
                         <button type="button" class="btn btn-sm btn-link p-0 hover-neon-x text-muted ms-2 btn-close-notification" onclick="event.stopPropagation(); markNotificationAsRead(${notification.id})" title="Usuń">
                             <i class="bi bi-x-lg fs-6"></i>
