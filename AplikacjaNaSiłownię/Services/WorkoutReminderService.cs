@@ -66,9 +66,10 @@ namespace AplikacjaNaSiłownię.Services
             var targetTimeStart = now.AddHours(23).AddMinutes(30);
             var targetTimeEnd = now.AddHours(24).AddMinutes(30);
 
-            // Wyciągamy z bazy tylko te treningi, które są "Zaplanowane" i odbywają się jutro w określonym przedziale czasowym
+            // Wyciągamy z bazy tylko te treningi, które są "Zaplanowane", przypomnienie jeszcze nie zostało wysłane,
+            // i odbywają się jutro w określonym przedziale czasowym. Zapobiega to zbędnym zapytaniom.
             var upcomingWorkouts = await db.PlannedWorkouts
-                .Where(w => w.Status == "Zaplanowany" && w.StartDate >= targetTimeStart && w.StartDate <= targetTimeEnd)
+                .Where(w => w.Status == "Zaplanowany" && !w.IsReminderSent && w.StartDate >= targetTimeStart && w.StartDate <= targetTimeEnd)
                 .ToListAsync();
 
             // Przechodzimy w pętli przez wszystkie znalezione treningi
@@ -77,28 +78,28 @@ namespace AplikacjaNaSiłownię.Services
                 // Tworzymy unikalną sygnaturę powiadomienia, np. "[ReminderID: 15]"
                 var reminderSignature = $"[ReminderID: {workout.Id}]";
                 
-                // BEZPIECZEŃSTWO: Sprawdzamy w bazie, czy do tego użytkownika NIE zostało już wysłane powiadomienie
-                // zawierające tę konkretną sygnaturę. Zapobiega to wysłaniu kilku takich samych powiadomień.
-                var alreadySent = await db.Notifications
-                    .AnyAsync(n => n.UserId == workout.ClientId && n.Message.Contains(reminderSignature));
+                // Wysyłamy powiadomienie do klienta
+                await notificationService.SendNotificationAsync(
+                    workout.ClientId,
+                    "Trening już jutro!",
+                    $"Przypominamy o Twoim zaplanowanym treningu '{workout.Title}' jutro o godzinie {workout.StartDate:HH:mm}. Zapraszamy! {reminderSignature}",
+                    "Trening"
+                );
 
-                // Jeśli jeszcze nie wysyłaliśmy przypomnienia do tego treningu:
-                if (!alreadySent)
+                // Oznaczamy w bazie, że przypomnienie zostało wysłane, co zapobiega dublowaniu
+                workout.IsReminderSent = true;
+
+                // Zapisujemy fakt wysłania w konsoli serwera
+                if (_logger.IsEnabled(LogLevel.Information))
                 {
-                    // Wysyłamy powiadomienie do klienta
-                    await notificationService.SendNotificationAsync(
-                        workout.ClientId,
-                        "Trening już jutro!",
-                        $"Przypominamy o Twoim zaplanowanym treningu '{workout.Title}' jutro o godzinie {workout.StartDate:HH:mm}. Zapraszamy! {reminderSignature}",
-                        "Trening"
-                    );
-
-                    // Zapisujemy fakt wysłania w konsoli serwera
-                    if (_logger.IsEnabled(LogLevel.Information))
-                    {
-                        _logger.LogInformation("Wysłano przypomnienie o treningu ID: {WorkoutId} dla klienta {ClientId}", workout.Id, workout.ClientId);
-                    }
+                    _logger.LogInformation("Wysłano przypomnienie o treningu ID: {WorkoutId} dla klienta {ClientId}", workout.Id, workout.ClientId);
                 }
+            }
+
+            // Zapisujemy zaktualizowane flagi przypomnień w bazie danych za jednym razem
+            if (upcomingWorkouts.Count > 0)
+            {
+                await db.SaveChangesAsync();
             }
         }
     }

@@ -215,6 +215,8 @@ namespace AplikacjaNaSiłownię.Controllers
         // Akcja asynchroniczna obsługująca żądanie zmiany hasła wysłane przez AJAX.
         [HttpPost]
         [ValidateAntiForgeryToken]
+        // Krytyczne zabezpieczenie: Rate Limiting chroni przed próbami masowej zmiany hasła przez boty / złośliwe skrypty.
+        [EnableRateLimiting("LoginPolicy")]
         public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto model)
         {
             // Administrator nie może zmieniać hasła z poziomu profilu (dodatkowe zabezpieczenie).

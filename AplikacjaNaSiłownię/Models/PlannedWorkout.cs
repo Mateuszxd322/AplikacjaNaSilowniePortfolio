@@ -29,6 +29,12 @@ namespace AplikacjaNaSiłownię.Models
         public string? Status { get; set; } = "Zaplanowany";
 
         /// <summary>
+        /// Flaga określająca, czy przypomnienie o treningu zostało już wysłane do klienta.
+        /// Zapobiega to kosztownemu skanowaniu bazy danych (operacje LIKE na wiadomościach powiadomień) w usłudze w tle.
+        /// </summary>
+        public bool IsReminderSent { get; set; } = false;
+
+        /// <summary>
         /// Logika obliczająca stan treningu na podstawie czasu. 
         /// Centralizacja tego w modelu zapobiega błędom i ułatwia wprowadzanie zmian w całej aplikacji.
         /// </summary>

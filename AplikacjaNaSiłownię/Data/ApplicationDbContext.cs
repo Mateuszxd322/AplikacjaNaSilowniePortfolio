@@ -43,8 +43,10 @@ namespace AplikacjaNaSiłownię.Data
             builder.Entity<CollaborationHistory>()
                 .HasIndex(h => h.TrenerId);
 
+            // Złożony indeks optymalizujący pobieranie i sortowanie nieprzeczytanych powiadomień 
+            // dla dzwoneczka powiadomień użytkownika (najnowsze u góry).
             builder.Entity<Notification>()
-                    .HasIndex(n => n.UserId);
+                .HasIndex(n => new { n.UserId, n.IsRead, n.CreatedAt });
         }
     }
 }

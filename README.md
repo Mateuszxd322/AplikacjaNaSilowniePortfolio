@@ -24,6 +24,7 @@ Aplikacja dzieli uprawnienia na trzy niezależne role, ujednolicone w ramach jed
 ### 3. Panel Klienta
 *   **Autonomia:** Samodzielne planowanie własnych treningów w osobistym kalendarzu.
 *   **Zarządzanie Współpracą:** Akceptowanie lub odrzucanie zaproszeń od trenerów, a także możliwość zakończenia aktualnej współpracy.
+*   **Bezpieczna Zmiana Hasła (Premium UI/UX):** Nowoczesny, trójpolowy formularz w profilu użytkownika oparty o SweetAlert2 i grupy wejściowe Bootstrap z wbudowanym, interaktywnym "oczkiem" do pokazywania/ukrywania wpisywanych znaków (ze zmianą koloru ikony na neonową zieleń w trybie widocznym).
 *   **Statystyki Aktywności:** Dedykowany dashboard pokazujący historię i statusy treningów (zrealizowane, nadchodzące, odwołane).
 
 ### 4. System Powiadomień w Czasie Rzeczywistym (SignalR)
@@ -41,7 +42,7 @@ Projekt został zaprojektowany z myślą o pełnej obronie przed atakami z listy
 1.  **Pełna Obrona przed IDOR (Insecure Direct Object Reference):**
     *   Wszystkie zapytania AJAX oraz operacje w serwisach biznesowych są rygorystycznie weryfikowane na poziomie serwera. Trener nie ma technicznej możliwości podejrzenia statystyk ani modyfikacji kalendarza klienta, z którym nie ma aktywnej, zatwierdzonej współpracy.
 2.  **Ochrona przed atakami Brute Force i DoS (Rate Limiting):**
-    *   Wdrożono zaawansowaną politykę `RateLimiting` typu Fixed Window w ASP.NET Core. Endpointy rejestracji i logowania są chronione przed automatycznymi atakami słownikowymi (max 5 prób na 10 sekund z jednego adresu IP).
+    *   Wdrożono zaawansowaną politykę `RateLimiting` typu Fixed Window w ASP.NET Core. Endpointy rejestracji, logowania oraz zmiany hasła (w profilu) są chronione przed automatycznymi atakami słownikowymi (max 5 prób na 10 sekund z jednego adresu IP).
 3.  **Twarde Zabezpieczenie Uploadu Plików (Magic Numbers Check):**
     *   Przesyłanie awatarów profilowych jest w pełni zabezpieczone: ograniczono rozmiar pliku (max 2MB), zastosowano whitelisting rozszerzeń oraz niskopoziomową weryfikację nagłówków bajtowych (MIME Magic Numbers) dla formatów PNG/JPEG. Całkowicie blokuje to próby wstrzyknięcia złośliwego kodu (atak *Polyglot Upload*).
     *   Pliki są zapisywane pod losowo generowanymi nazwami `Guid`, eliminując ryzyko podatności *Path Traversal*.
@@ -76,7 +77,10 @@ Prezentuje pełny cykl życia bezpiecznego zapytania AJAX (np. przy planowaniu n
 *   **Database-Side Aggregation (IQueryable):** Wszystkie analityki i zapytania filtrujące są tłumaczone bezpośrednio na zapytania T-SQL i wykonywane po stronie bazy danych. Aplikacja nie pobiera zbędnych danych do pamięci RAM serwera.
 *   **Indeksowanie Wydajnościowe:** 
     *   Dodano złożony indeks nieklastrowany `(ClientId, StartDate)` na tabeli `PlannedWorkouts`, drastycznie przyspieszając ładowanie dynamicznych kalendarzy i agregacji statystyk.
+    *   Dodano złożony indeks nieklastrowany `(UserId, IsRead, CreatedAt)` na tabeli `Notifications`, który eliminuje narzut wyszukiwania i sortowania powiadomień w dzwoneczku, przenosząc te operacje w całości na poziom wydajnego indeksu w silniku SQL.
     *   Dodano indeksy na kluczach obcych tabeli logów historycznych.
+*   **Optymalizacja Usług w Tle (Background Task Tuning):**
+    *   Wprowadzono flagę logiczną `IsReminderSent` na poziomie modelu `PlannedWorkout`. Zastąpiło to kosztowne przeszukiwanie bazy danych zapytaniami tekstowymi `LIKE` (Contains na treści powiadomień) w usłudze w tle w celu weryfikacji, czy przypomnienie zostało już wysłane. Zapytanie jest teraz wykonywane w ułamku milisekundy.
 *   **Bezpieczne Transakcje (ACID):** Wszystkie operacje modyfikujące powiązania między użytkownikami (np. usuwanie konta lub zakończenie współpracy) są obudowane w asynchroniczne transakcje bazodanowe (`BeginTransactionAsync`), co gwarantuje integralność danych w przypadku awarii serwera.
 *   **Luźne Powiązanie Audytowe (Loose Coupling):** Tabela `CollaborationHistories` nie ma fizycznych powiązań kluczy obcych z tabelą użytkowników, aby usunięcie konta użytkownika nie niszczyło logów historycznych (uniknięcie problemu *Cascade Delete*).
 
@@ -85,6 +89,7 @@ Prezentuje pełny cykl życia bezpiecznego zapytania AJAX (np. przy planowaniu n
 ## Standardy Kodowania (Clean Code)
 
 *   **Modern C# i Range Operators:** Uproszczono operacje na tekście, rezygnując z przestarzałej metody `.Substring` na rzecz bezpiecznego i eleganckiego operatora zakresu `[..500]`, w pełni dostosowując kod do reguł analizy statycznej środowiska programistycznego.
+*   **Optymalizacja Alokacji Pamięci (.NET Heap Tuning):** Zastąpiono alokujące zapytania rozszerzające LINQ `.Any()` bezpośrednim sprawdzeniem właściwości `.Count > 0` dla obiektów typu `List<T>`. Zapobiega to zbędnej alokacji obiektów iteratorów na stercie i odciąża proces Garbage Collectora przy częstych żądaniach w tle.
 *   **Uelastycznienie Logiki Biznesowej (UX):** Wprowadzono bezpieczną obsługę wartości domyślnych przy zrywaniu współpracy. Jeśli powód nie zostanie podany przez użytkownika, system automatycznie podstawia bezpieczną frazę "Brak podanego powodu", zapobiegając blokowaniu operacji bazodanowych i poprawiając płynność UX.
 *   **Primary Constructors (C# 12):** Zastosowanie nowoczesnego wstrzykiwania zależności w nagłówkach klas, co usuwa zbędny kod i podnosi czytelność.
 *   **Timezone Normalization (`TimeHelper`):** Całkowicie wyeliminowano problem przesunięć stref czasowych serwera w chmurze (np. Azure/AWS). Klasa pomocnicza unifikuje czas do strefy polskiej (CET/CEST) zarówno w systemach Windows, jak i Unix/Linux.
