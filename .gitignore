@@ -1,0 +1,53 @@
+## Visual Studio
+.vs/
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Re]leases/
+x64/
+x86/
+[Aa]rch/
+build/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+## Visual Studio Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+## .NET Core / C#
+project.lock.json
+project.fragment.lock.json
+artifacts/
+TestResults/
+
+## User-specific files
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+## SQL Server files
+*.mdf
+*.ldf
+*.ndf
+
+## Local Development Configuration
+appsettings.Development.json
+
+## OS files
+.DS_Store
+Thumbs.db
+
+## User Uploaded Files (Avatars, uploads)
+**/wwwroot/uploads/*
+!**/wwwroot/uploads/.gitkeep
+

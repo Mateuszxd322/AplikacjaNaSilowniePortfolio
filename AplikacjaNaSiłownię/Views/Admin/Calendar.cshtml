@@ -1,0 +1,244 @@
+@{
+    ViewData["Title"] = "Podgląd Kalendarzy";
+    ViewData["BodyClass"] = "bg-calendar-view";
+}
+
+<div class="row mb-4">
+    <div class="col-12">
+        <h2 class="text-neon text-uppercase fw-bold mb-0">Podgląd Kalendarzy</h2>
+        <p class="text-white-50">Wybierz Trenera lub Klienta, aby wyświetlić siatkę jego zaplanowanych zajęć i zarządzać nimi.</p>
+    </div>
+</div>
+
+<div class="card gym-card p-4 mb-4">
+    <div class="row align-items-center">
+        <label class="col-auto col-form-label text-neon fw-bold">Wybierz użytkownika:</label>
+        <div class="col-md-6 col-sm-12">
+            <select id="userSelector" class="form-select gym-input bg-dark text-white border-secondary">
+                <option value="">-- Wybierz profil --</option>
+                @if (ViewBag.UserList != null)
+                {
+                    foreach (var u in ViewBag.UserList)
+                    {
+                        <option value="@u.Id">@u.Text</option>
+                    }
+                }
+            </select>
+        </div>
+    </div>
+</div>
+
+<div class="card gym-card p-4" id="calendarContainer" style="display: none;">
+    <div id="calendar"></div>
+</div>
+
+<!-- Modal Podglądu/Edycji/Usuwania Treningu dla Admina -->
+<div class="modal fade" id="viewWorkoutModal" tabindex="-1" aria-labelledby="viewWorkoutModalLabel" aria-hidden="true" data-bs-theme="dark">
+  <div class="modal-dialog">
+    <div class="modal-content gym-card">
+      <div class="modal-header border-bottom-secondary">
+        <h5 class="modal-title text-neon" id="viewWorkoutModalLabel">Szczegóły treningu</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body text-white">
+          <input type="hidden" id="viewWorkoutId" />
+          <div class="row mb-3">
+              <div class="col-sm-6">
+                  <label class="form-label text-muted">Data treningu</label>
+                  <input type="text" class="form-control gym-input" id="viewWorkoutDate" readonly />
+              </div>
+              <div class="col-sm-3 col-6 mt-3 mt-sm-0">
+                  <label class="form-label text-muted">Godz. od</label>
+                  <input type="time" class="form-control gym-input" id="viewWorkoutStartTime" />
+              </div>
+              <div class="col-sm-3 col-6 mt-3 mt-sm-0">
+                  <label class="form-label text-muted">Godz. do</label>
+                  <input type="time" class="form-control gym-input" id="viewWorkoutEndTime" />
+              </div>
+          </div>
+          <div class="mb-3">
+              <label class="form-label text-muted">Tytuł treningu</label>
+              <input type="text" class="form-control gym-input" id="viewWorkoutTitle" />
+          </div>
+          <div class="mb-3">
+              <label class="form-label text-muted">Status</label>
+              <input type="text" class="form-control gym-input" id="viewWorkoutStatus" readonly />
+          </div>
+          <div class="mb-3">
+              <label class="form-label text-muted">Opis (opcjonalnie)</label>
+              <textarea class="form-control gym-input" id="viewWorkoutDescription" rows="3"></textarea>
+          </div>
+      </div>
+      <div class="modal-footer border-top-secondary justify-content-between">
+        <button type="button" class="btn btn-outline-danger" id="deleteWorkoutBtn">Usuń trening</button>
+        <div>
+           <button type="button" class="btn btn-secondary me-1" data-bs-dismiss="modal">Zamknij</button>
+           <button type="button" class="btn btn-neon" id="editWorkoutBtn">Zapisz edycję</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var calendarEl = document.getElementById('calendar');
+            var userSelector = document.getElementById('userSelector');
+            var calendarContainer = document.getElementById('calendarContainer');
+            var viewWorkoutModal = new bootstrap.Modal(document.getElementById('viewWorkoutModal'));
+            var activeEvent = null;
+            
+            var calendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'dayGridMonth',
+                locale: 'pl',
+                themeSystem: 'bootstrap5',
+                headerToolbar: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'dayGridMonth,timeGridWeek,timeGridDay'
+                },
+                displayEventTime: true,
+                displayEventEnd: true,
+                eventTimeFormat: { hour: '2-digit', minute: '2-digit', hour12: false },
+                // Brak podanego domyślnie źródła zdarzeń. Będziemy wstrzykiwać nową tabelę z użyciem JS.
+                events: [],
+                eventClick: function (info) {
+                    activeEvent = info.event;
+                    document.getElementById('viewWorkoutId').value = info.event.id;
+                    
+                    let eDate = info.event.start;
+                    let fDate = eDate.getFullYear() + "-" + String(eDate.getMonth() + 1).padStart(2, '0') + "-" + String(eDate.getDate()).padStart(2, '0');
+                    let eEnd = info.event.end || eDate;
+
+                    let startStr = String(eDate.getHours()).padStart(2, '0') + ":" + String(eDate.getMinutes()).padStart(2, '0');
+                    let endStr = String(eEnd.getHours()).padStart(2, '0') + ":" + String(eEnd.getMinutes()).padStart(2, '0');
+                    
+                    document.getElementById('viewWorkoutDate').value = fDate;
+                    document.getElementById('viewWorkoutStartTime').value = startStr === "00:00" ? "" : startStr;
+                    document.getElementById('viewWorkoutEndTime').value = endStr === "00:00" ? "" : endStr;
+                    document.getElementById('viewWorkoutTitle').value = info.event.title.replace(/^\[.*?\]\s*/, ''); // Usuwa prefiks [Imie Nazwisko] w kalendarzu trenera
+                    document.getElementById('viewWorkoutDescription').value = info.event.extendedProps.description || '';
+                    
+                    let statusVal = info.event.extendedProps.status || 'Zaplanowany';
+                    let statusInput = document.getElementById('viewWorkoutStatus');
+                    statusInput.value = statusVal;
+                    
+                    // Kolorowanie pola statusu w modalu (wymuszone !important)
+                    statusInput.className = 'form-control gym-input fw-bold'; 
+                    if (statusVal === 'Zrealizowany') {
+                        statusInput.style.cssText = 'color: #198754 !important; font-weight: bold;';
+                    } else {
+                        statusInput.style.cssText = 'color: #ffc107 !important; font-weight: bold;';
+                    }
+
+                    // Blokada edycji dla ukończonych i odwołanych
+                    let isEditable = (statusVal === 'Zaplanowany');
+                    document.getElementById('editWorkoutBtn').style.display = isEditable ? 'inline-block' : 'none';
+                    document.getElementById('deleteWorkoutBtn').style.display = isEditable ? 'inline-block' : 'none';
+                    
+                    document.getElementById('viewWorkoutTitle').readOnly = !isEditable;
+                    document.getElementById('viewWorkoutDescription').readOnly = !isEditable;
+                    document.getElementById('viewWorkoutStartTime').readOnly = !isEditable;
+                    document.getElementById('viewWorkoutEndTime').readOnly = !isEditable;
+                    
+                    viewWorkoutModal.show();
+                }
+            });
+
+            calendar.render();
+
+            // Kiedy admin wybierze użytkownika - ładujemy siatkę dla tego uzytkownika!
+            userSelector.addEventListener('change', function() {
+                var selectedId = this.value;
+                if (!selectedId) {
+                    calendarContainer.style.display = 'none';
+                    return;
+                }
+                
+                // Odkrywamy kalendarz
+                calendarContainer.style.display = 'block';
+                
+                // Wymuszamy na kalendarzu przeliczenie wysokości i szerokości, ponieważ przy ładowaniu strony był w niewidocznym divie (wysokość 0px)
+                calendar.updateSize();
+                
+                // Kasujemy poprzednio załadowane źródło spotkań
+                calendar.removeAllEventSources();
+                
+                // Wstrzykujemy nowe, celujące w endpoint zwracający agregacje .json  z nowym Id
+                calendar.addEventSource('/Admin/GetUserWorkouts?userId=' + selectedId);
+            });
+
+            document.getElementById('deleteWorkoutBtn').addEventListener('click', function () {
+                var wId = document.getElementById('viewWorkoutId').value;
+                gymConfirm("Czy na pewno chcesz bezpowrotnie usunąć ten trening jako Administrator?", function() {
+                    fetch('/Admin/DeleteWorkout', {
+                        method: 'POST',
+                        headers: { 
+                                'Content-Type': 'application/json',
+                                'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                            },
+                        body: JSON.stringify(wId)
+                    })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.success) {
+                            if(activeEvent) activeEvent.remove();
+                            viewWorkoutModal.hide();
+                            gymAlert('Trening zlikwidowany przez Admina!', 'success');
+                        } else {
+                            gymAlert('Błąd usuwania!', 'error');
+                        }
+                    });
+                });
+            });
+
+            document.getElementById('editWorkoutBtn').addEventListener('click', function () {
+                var wId = document.getElementById('viewWorkoutId').value;
+                var newTitle = document.getElementById('viewWorkoutTitle').value;
+                var newDesc = document.getElementById('viewWorkoutDescription').value;
+                let dateVal = document.getElementById('viewWorkoutDate').value;
+                let startT = document.getElementById('viewWorkoutStartTime').value;
+                let endT = document.getElementById('viewWorkoutEndTime').value;
+
+                if (!newTitle) { gymAlert("Tytuł treningu nie może być pusty!"); return; }
+
+                var editModel = {
+                    Id: parseInt(wId),
+                    StartDate: dateVal + (startT ? "T" + startT + ":00" : "T00:00:00"),
+                    EndDate: endT ? (dateVal + "T" + endT + ":00") : null,
+                    Title: newTitle,
+                    Description: newDesc
+                };
+
+                fetch('/Admin/EditWorkout', {
+                    method: 'POST',
+                    headers: { 
+                                'Content-Type': 'application/json',
+                                'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                            },
+                    body: JSON.stringify(editModel)
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        // Przy odświeżaniu kafelka trenera musimy pilnować czy miał prefix. Upraszczając - po prostu dodajemy nową datę do kafelka, a nazwę ustawiamy nową
+                        if (activeEvent) {
+                            // Jeśli w nazwie był prefiks ucznia z kalendarza trenera - pomińmy go lub odświeżmy cały kalendarz
+                            // Najbezpieczniej odświeżyć źródło żeby utrzymać format [Imie Nazwisko] (jeśli wybrany to trener)
+                            var selectedId = document.getElementById('userSelector').value;
+                            calendar.removeAllEventSources();
+                            calendar.addEventSource('/Admin/GetUserWorkouts?userId=' + selectedId);
+                        }
+                        viewWorkoutModal.hide();
+                        gymAlert('Zmiany narzucone poprawnie!', 'success');
+                    } else {
+                        gymAlert('Błąd podczas edytowania z poziomu Admina!', 'error');
+                    }
+                })
+                .catch(err => console.error("Error editing", err));
+            });
+        });
+    </script>
+}

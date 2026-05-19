@@ -1,0 +1,112 @@
+@model IEnumerable<AplikacjaNaSiłownię.Models.PlannedWorkout>
+@{
+    var userRole = ViewBag.UserRole as string;
+    ViewData["Title"] = (userRole == "Admin" || userRole == "Trener") ? "Historia treningów klientów" : "Historia Treningów";
+    ViewData["BodyClass"] = "bg-history";
+}
+
+<div class="row mb-4">
+    <div class="col-12">
+        <h2 class="text-neon text-uppercase fw-bold mb-0">@((userRole == "Admin" || userRole == "Trener") ? "Historia treningów klientów" : "Historia Aktywności")</h2>
+        <p class="text-white-50">Lista wszystkich zaplanowanych, zrealizowanych i odwołanych treningów.</p>
+    </div>
+</div>
+
+<div class="card gym-card p-4">
+    <div class="table-responsive">
+        <table class="table table-dark table-hover align-middle border-secondary">
+            <thead>
+                <tr>
+                    <th class="text-neon">Data i Godzina</th>
+                    <th class="text-neon">Tytuł treningu</th>
+                    @if (userRole != "Klient")
+                    {
+                        <th class="text-neon">Klient</th>
+                    }
+                    <th class="text-neon">Status</th>
+                    <th class="text-neon">Opis</th>
+                    <th class="text-neon text-end">Akcje</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if(Model != null && Model.Any())
+                {
+                    foreach (var item in Model)
+                    {
+                        var currentStatus = string.IsNullOrEmpty(item.Status) ? "Zaplanowany" : item.Status;
+                        var endTime = item.EndDate ?? item.StartDate;
+                        var isCompleted = currentStatus != "Odwołany" && endTime < DateTime.UtcNow;
+                        var finalStatus = isCompleted ? "Zrealizowany" : currentStatus;
+                        var badgeClass = finalStatus == "Zrealizowany" ? "bg-success" : (finalStatus == "Odwołany" ? "bg-danger" : "bg-warning text-dark");
+
+                        <tr>
+                            <td>
+                                <div>@item.StartDate.ToString("dd.MM.yyyy")</div>
+                                <small class="text-white-50">@item.StartDate.ToString("HH:mm") @(item.EndDate.HasValue ? "- " + item.EndDate.Value.ToString("HH:mm") : "")</small>
+                            </td>
+                            <td class="fw-bold">@item.Title</td>
+                            @if (userRole != "Klient")
+                            {
+                                <td>@(item.Client != null ? $"{item.Client.Imie} {item.Client.Nazwisko}" : "Brak danych")</td>
+                            }
+                            <td>
+                                <span class="badge rounded-pill @badgeClass px-3 py-2">@finalStatus</span>
+                            </td>
+                            <td class="text-white-50">
+                                @(string.IsNullOrEmpty(item.Description) ? "-" : item.Description)
+                            </td>
+                            <td class="text-end">
+                                <button class="btn btn-sm btn-outline-danger delete-history-btn" data-id="@item.Id" title="Usuń trwale ten wpis">
+                                    <i class="bi bi-trash3"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="6" class="text-center py-4 text-white-50">Brak historii treningów do wyświetlenia.</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.delete-history-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    var recordId = this.getAttribute('data-id');
+                    var tr = this.closest('tr');
+                    
+                    gymConfirm("Czy na pewno chcesz na zawsze wymazać ten trening z historii? Tej operacji nie można cofnąć.", function() {
+                        fetch('/Historia/DeleteHistoryRecord', {
+                            method: 'POST',
+                            headers: { 
+                                'Content-Type': 'application/json',
+                                'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                            },
+                            body: JSON.stringify(parseInt(recordId))
+                        })
+                        .then(r => r.json())
+                        .then(data => {
+                            if (data.success) {
+                                // Usuwamy wiersz z tabeli z małym efektem
+                                tr.style.transition = "opacity 0.5s";
+                                tr.style.opacity = "0";
+                                setTimeout(() => tr.remove(), 500);
+                                gymAlert('Trening wymazany z kart historii.', 'success');
+                            } else {
+                                gymAlert(data.message || 'Błąd usuwania!', 'error');
+                            }
+                        })
+                        .catch(err => console.error("Error deleting history record", err));
+                    });
+                });
+            });
+        });
+    </script>
+}

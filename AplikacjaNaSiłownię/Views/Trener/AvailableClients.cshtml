@@ -1,0 +1,163 @@
+@model IEnumerable<AplikacjaNaSiłownię.Models.ApplicationUser>
+
+@{
+    ViewData["Title"] = "Dostępni Klienci";
+}
+
+<div class="row mb-4">
+    <div class="col-12 text-center">
+        <h2 class="text-neon text-uppercase fw-bold">Znajdź Klientów</h2>
+        <p class="text-white-50">Lista osób poszukujących trenera personalnego</p>
+        <a asp-action="Index" class="btn btn-outline-secondary mt-2">
+            <i class="bi bi-arrow-left"></i> Wróć do panelu
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    @if(!Model.Any())
+    {
+        <div class="col-12 border border-secondary p-5 text-center gym-card rounded-4">
+            <h4 class="text-white-50">Obecnie nie ma żadnych klientów poszukujących trenera.</h4>
+        </div>
+    }
+    else
+    {
+        @foreach(var client in Model)
+        {
+            <div class="col-md-4 mb-4 client-card-container">
+                <div class="card gym-card h-100 border-0 shadow">
+                    <div class="card-body text-center">
+                        <div class="mb-3">
+                            <span class="display-1 text-neon"><i class="bi bi-person-bounding-box"></i></span>
+                        </div>
+                        <h4 class="text-white">@client.Imie @client.Nazwisko</h4>
+                        <p class="text-muted mb-4">@client.Email</p>
+                        
+                        <div class="d-grid">
+                            <button type="button" class="btn btn-neon btn-assign-client" data-id="@client.Id">
+                                <i class="bi bi-person-check"></i> Wyślij zaproszenie
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+</div>
+
+@{
+    var sentRequests = ViewBag.SentRequests as IEnumerable<AplikacjaNaSiłownię.Models.ApplicationUser>;
+}
+
+@if (sentRequests != null && sentRequests.Any())
+{
+    <div class="row mt-5 mb-4">
+        <div class="col-12 text-center">
+            <h3 class="text-warning text-uppercase fw-bold">Wysłane Zaproszenia</h3>
+            <p class="text-white-50">Klienci, którzy oczekują na Twoje zaproszenie (nie mogą być zaproszeni przez innych).</p>
+        </div>
+    </div>
+
+    <div class="row">
+        @foreach(var client in sentRequests)
+        {
+            <div class="col-md-4 mb-4 sent-card-container">
+                <div class="card gym-card border-warning border h-100 shadow">
+                    <div class="card-body text-center">
+                        <div class="mb-3">
+                            <span class="display-4 text-warning"><i class="bi bi-hourglass-split"></i></span>
+                        </div>
+                        <h5 class="text-white">@client.Imie @client.Nazwisko</h5>
+                        <p class="text-muted small mb-4">@client.Email</p>
+                        
+                        <div class="d-grid">
+                            <button type="button" class="btn btn-outline-danger btn-cancel-request" data-id="@client.Id">
+                                <i class="bi bi-x-circle"></i> Anuluj zaproszenie
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@section Scripts {
+    <script>
+        // Skrypt obsługujący zapytania w tle (AJAX) - pozwala na wysyłanie danych do serwera bez migania/przeładowywania całej strony.
+        document.addEventListener('DOMContentLoaded', function() {
+            
+            // --- 1. WYSYŁANIE ZAPROSZENIA DO KLIENTA ---
+            const assignButtons = document.querySelectorAll('.btn-assign-client');
+            
+            assignButtons.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const clientId = this.getAttribute('data-id'); // Odczytujemy ID klienta z klikniętego przycisku
+                    const cardContainer = this.closest('.client-card-container');
+                    
+                    // Używamy globalnego modala (gymConfirm), by zapobiec przypadkowym kliknięciom
+                    gymConfirm("Czy na pewno chcesz wysłać zaproszenie do tego klienta?", function() {
+                        
+                        // "fetch" wysyła żądanie pod konkretny adres w kontrolerze
+                        fetch('/Trener/AssignClient', {
+                            method: 'POST',
+                            headers: { 
+                                'Content-Type': 'application/json',
+                                'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value // Kluczowe zabezpieczenie przed atakami CSRF
+                            },
+                            body: JSON.stringify(clientId)
+                        })
+                        .then(response => response.json()) // Czekamy na odpowiedź z serwera (z metody C#)
+                        .then(data => {
+                            // Jeśli kod C# zwrócił 'success = true'
+                            if (data.success) {
+                                gymAlert("Zaproszenie zostało wysłane!", "success");
+                                setTimeout(() => location.reload(), 1500); // Po 1.5s przeładowujemy stronę, by odświeżyć widok list
+                            } else {
+                                gymAlert(data.message || "Wystąpił błąd podczas wysyłania zaproszenia.", "error");
+                            }
+                        })
+                        .catch(err => {
+                            console.error(err);
+                            gymAlert("Wystąpił błąd połączenia z serwerem.", "error");
+                        });
+                    });
+                });
+            });
+
+            // --- 2. ANULOWANIE WYKORZYSTANEGO ZAPROSZENIA ---
+            // Mechanizm działa niemal identycznie co powyższy, ale uderza w inny endpoint na serwerze (/Trener/CancelRequest)
+            const cancelButtons = document.querySelectorAll('.btn-cancel-request');
+            cancelButtons.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const clientId = this.getAttribute('data-id');
+                    
+                    gymConfirm("Czy na pewno chcesz anulować wysłane zaproszenie? Klient wróci na listę dostępnych.", function() {
+                        fetch('/Trener/CancelRequest', {
+                            method: 'POST',
+                            headers: { 
+                                'Content-Type': 'application/json',
+                                'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                            },
+                            body: JSON.stringify(clientId)
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                gymAlert("Zaproszenie zostało anulowane.", "info");
+                                setTimeout(() => location.reload(), 1500);
+                            } else {
+                                gymAlert(data.message || "Wystąpił błąd podczas anulowania zaproszenia.", "error");
+                            }
+                        })
+                        .catch(err => {
+                            console.error(err);
+                            gymAlert("Wystąpił błąd połączenia z serwerem.", "error");
+                        });
+                    });
+                });
+            });
+        });
+    </script>
+}

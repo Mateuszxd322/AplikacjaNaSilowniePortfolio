@@ -1,0 +1,92 @@
+@model IEnumerable<AplikacjaNaSiłownię.Controllers.AdminController.AdminCollaborationViewModel>
+
+@{
+    ViewData["Title"] = "Zarządzanie Współpracami";
+}
+
+<div class="row mb-4">
+    <div class="col-12 text-center">
+        <h2 class="text-neon text-uppercase fw-bold">Zarządzanie Współpracami</h2>
+        <p class="text-white-50">Podgląd aktywnych relacji Trener-Klient</p>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        @if (!Model.Any())
+        {
+            <div class="card gym-card border-secondary border shadow p-5 text-center rounded-4">
+                <h4 class="text-white-50"><i class="bi bi-diagram-3 fs-1 d-block mb-3"></i>Brak aktywnych współprac</h4>
+                <p class="text-muted mb-0">W systemie nie ma obecnie żadnych aktywnych relacji między trenerami a klientami.</p>
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive bg-dark rounded-3 shadow">
+                <table class="table table-dark table-hover mb-0 align-middle">
+                    <thead class="text-info border-bottom border-secondary">
+                        <tr>
+                            <th class="ps-4 py-3"><i class="bi bi-person-badge me-2"></i> Trener</th>
+                            <th class="py-3"><i class="bi bi-person me-2"></i> Klient</th>
+                            <th class="pe-4 py-3 text-end"><i class="bi bi-gear me-2"></i> Działania</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var record in Model)
+                        {
+                            <tr class="border-secondary">
+                                <td class="ps-4 fw-bold text-light">@record.TrainerName</td>
+                                <td class="text-light">@record.ClientName</td>
+                                <td class="pe-4 text-end">
+                                    <button type="button" class="btn btn-outline-danger btn-sm btn-terminate" data-client-id="@record.ClientId">
+                                        <i class="bi bi-trash3"></i> Zakończ przymusowo
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const terminateButtons = document.querySelectorAll('.btn-terminate');
+            
+            terminateButtons.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const clientId = this.getAttribute('data-client-id');
+                    
+                    gymOptionalPrompt("Zanim przymusowo zakończysz współpracę, możesz podać powód. Zostanie on zapisany w historii u obu użytkowników. Jeśli zostawisz to pole puste, wygenerowany zostanie domyślny powód administracyjny.", function(reason) {
+                        const payload = { ClientId: clientId, Reason: reason };
+                        
+                        fetch('/Admin/TerminateCollaboration', {
+                            method: 'POST',
+                            headers: { 
+                                'Content-Type': 'application/json',
+                                'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                            },
+                            body: JSON.stringify(payload)
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                gymAlert("Współpraca została zakończona przymusowo.", "info");
+                                setTimeout(() => location.reload(), 1500);
+                            } else {
+                                gymAlert(data.message || "Wystąpił błąd podczas kończenia współpracy.", "error");
+                            }
+                        })
+                        .catch(err => {
+                            console.error(err);
+                            gymAlert("Wystąpił błąd połączenia z serwerem.", "error");
+                        });
+                    });
+                });
+            });
+        });
+    </script>
+}

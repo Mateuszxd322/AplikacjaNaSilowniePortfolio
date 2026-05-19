@@ -1,0 +1,320 @@
+@{
+    ViewData["Title"] = "Mój Kalendarz Treningów";
+    ViewData["BodyClass"] = "bg-calendar-view";
+}
+
+<div class="row mb-4">
+    <div class="col-12">
+        <h2 class="text-neon text-uppercase fw-bold mb-0">Harmonogram</h2>
+        <p class="text-white-50">Kliknij na wybrany dzień, aby zaplanować trening.</p>
+    </div>
+</div>
+
+<div class="card gym-card p-4">
+    <div id="calendar"></div>
+</div>
+
+<!-- Modal Dodawania Treningu -->
+<div class="modal fade" id="addWorkoutModal" tabindex="-1" aria-labelledby="addWorkoutModalLabel" aria-hidden="true" data-bs-theme="dark">
+  <div class="modal-dialog">
+    <div class="modal-content gym-card">
+      <div class="modal-header border-bottom-secondary">
+        <h5 class="modal-title text-neon" id="addWorkoutModalLabel">Zaplanuj trening</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body text-white">
+          <input type="hidden" id="workoutDate" />
+          <div class="row mb-3">
+              <div class="col-sm-6">
+                  <label class="form-label text-muted">Data treningu</label>
+                  <input type="text" class="form-control gym-input" id="workoutDateDisplay" readonly />
+              </div>
+              <div class="col-sm-3 col-6 mt-3 mt-sm-0">
+                  <label class="form-label text-muted">Godz. od</label>
+                  <input type="time" class="form-control gym-input" id="workoutStartTime" />
+              </div>
+              <div class="col-sm-3 col-6 mt-3 mt-sm-0">
+                  <label class="form-label text-muted">Godz. do</label>
+                  <input type="time" class="form-control gym-input" id="workoutEndTime" />
+              </div>
+          </div>
+          <div class="mb-3">
+              <label class="form-label text-muted">Tytuł treningu</label>
+              <input type="text" class="form-control gym-input" id="workoutTitle" placeholder="Np. Klatka + Triceps" />
+          </div>
+          <div class="mb-3">
+              <label class="form-label text-muted">Opis (opcjonalnie)</label>
+              <textarea class="form-control gym-input" id="workoutDescription" rows="3" placeholder="Zanotuj planowane ćwiczenia"></textarea>
+          </div>
+      </div>
+      <div class="modal-footer border-top-secondary">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
+        <button type="button" class="btn btn-neon" id="saveWorkoutBtn">Zapisz do kalendarza</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Podglądu/Usuwania Treningu -->
+<div class="modal fade" id="viewWorkoutModal" tabindex="-1" aria-labelledby="viewWorkoutModalLabel" aria-hidden="true" data-bs-theme="dark">
+  <div class="modal-dialog">
+    <div class="modal-content gym-card">
+      <div class="modal-header border-bottom-secondary">
+        <h5 class="modal-title text-neon" id="viewWorkoutModalLabel">Szczegóły treningu</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body text-white">
+          <input type="hidden" id="viewWorkoutId" />
+          <div class="row mb-3">
+              <div class="col-sm-6">
+                  <label class="form-label text-muted">Data treningu</label>
+                  <input type="text" class="form-control gym-input" id="viewWorkoutDate" readonly />
+              </div>
+              <div class="col-sm-3 col-6 mt-3 mt-sm-0">
+                  <label class="form-label text-muted">Godz. od</label>
+                  <input type="time" class="form-control gym-input" id="viewWorkoutStartTime" />
+              </div>
+              <div class="col-sm-3 col-6 mt-3 mt-sm-0">
+                  <label class="form-label text-muted">Godz. do</label>
+                  <input type="time" class="form-control gym-input" id="viewWorkoutEndTime" />
+              </div>
+          </div>
+          <div class="mb-3">
+              <label class="form-label text-muted">Tytuł treningu</label>
+              <input type="text" class="form-control gym-input" id="viewWorkoutTitle" />
+          </div>
+          <div class="mb-3">
+              <label class="form-label text-muted">Status</label>
+              <input type="text" class="form-control gym-input" id="viewWorkoutStatus" readonly />
+          </div>
+          <div class="mb-3">
+              <label class="form-label text-muted">Opis (opcjonalnie)</label>
+              <textarea class="form-control gym-input" id="viewWorkoutDescription" readonly rows="3"></textarea>
+          </div>
+      </div>
+      <div class="modal-footer border-top-secondary justify-content-between">
+        <button type="button" class="btn btn-outline-danger" id="deleteWorkoutBtn">Usuń trening</button>
+        <div>
+           <button type="button" class="btn btn-secondary me-1" data-bs-dismiss="modal">Zamknij</button>
+           <button type="button" class="btn btn-neon" id="editWorkoutBtn">Zapisz edycję</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var calendarEl = document.getElementById('calendar');
+            var workoutModal = new bootstrap.Modal(document.getElementById('addWorkoutModal'));
+            var viewWorkoutModal = new bootstrap.Modal(document.getElementById('viewWorkoutModal'));
+            var activeEvent = null;
+            
+            var calendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'dayGridMonth',
+                locale: 'pl',
+                themeSystem: 'bootstrap5',
+                headerToolbar: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'dayGridMonth,timeGridWeek,timeGridDay'
+                },
+                events: '/Klient/GetWorkouts',
+                displayEventTime: true,
+                displayEventEnd: true,
+                eventTimeFormat: { hour: '2-digit', minute: '2-digit', hour12: false },
+                dateClick: function (info) {
+                    // Blokada planowania w przeszłości? Można dodać sprawdzanie (if info.date < new Date().setHours(0,0,0,0) itp)
+                    // Zgodnie z wymaganiem "może klikać w przyszłe daty":
+                    let today = new Date();
+                    today.setHours(0,0,0,0);
+                    if (info.date < today) {
+                        gymAlert("Nie możesz planować treningów w przeszłości!");
+                        return;
+                    }
+
+                    document.getElementById('workoutDate').value = info.dateStr;
+                    document.getElementById('workoutDateDisplay').value = info.dateStr;
+                    document.getElementById('workoutStartTime').value = '16:00';
+                    document.getElementById('workoutEndTime').value = '17:30';
+                    document.getElementById('workoutTitle').value = '';
+                    document.getElementById('workoutDescription').value = '';
+                    workoutModal.show();
+                },
+                eventClick: function(info) {
+                    activeEvent = info.event;
+                    document.getElementById('viewWorkoutId').value = info.event.id;
+                    
+                    let eDate = info.event.start;
+                    let fDate = eDate.getFullYear() + "-" + String(eDate.getMonth() + 1).padStart(2, '0') + "-" + String(eDate.getDate()).padStart(2, '0');
+                    let eEnd = info.event.end || eDate;
+
+                    let startStr = String(eDate.getHours()).padStart(2, '0') + ":" + String(eDate.getMinutes()).padStart(2, '0');
+                    let endStr = String(eEnd.getHours()).padStart(2, '0') + ":" + String(eEnd.getMinutes()).padStart(2, '0');
+                    
+                    document.getElementById('viewWorkoutDate').value = fDate;
+                    document.getElementById('viewWorkoutStartTime').value = startStr === "00:00" ? "" : startStr;
+                    document.getElementById('viewWorkoutEndTime').value = endStr === "00:00" ? "" : endStr;
+                    document.getElementById('viewWorkoutTitle').value = info.event.title;
+                    document.getElementById('viewWorkoutDescription').value = info.event.extendedProps.description || '';
+                    
+                    let statusVal = info.event.extendedProps.status || 'Zaplanowany';
+                    let statusInput = document.getElementById('viewWorkoutStatus');
+                    statusInput.value = statusVal;
+                    
+                    // Kolorowanie pola statusu w modalu (wymuszone !important)
+                    statusInput.className = 'form-control gym-input fw-bold'; 
+                    if (statusVal === 'Zrealizowany') {
+                        statusInput.style.cssText = 'color: #198754 !important; font-weight: bold;';
+                    } else {
+                        statusInput.style.cssText = 'color: #ffc107 !important; font-weight: bold;';
+                    }
+
+                    // Blokada edycji dla ukończonych i odwołanych
+                    let isEditable = (statusVal === 'Zaplanowany');
+                    document.getElementById('editWorkoutBtn').style.display = isEditable ? 'inline-block' : 'none';
+                    document.getElementById('deleteWorkoutBtn').style.display = isEditable ? 'inline-block' : 'none';
+                    
+                    document.getElementById('viewWorkoutTitle').readOnly = !isEditable;
+                    document.getElementById('viewWorkoutDescription').readOnly = !isEditable;
+                    document.getElementById('viewWorkoutStartTime').readOnly = !isEditable;
+                    document.getElementById('viewWorkoutEndTime').readOnly = !isEditable;
+                    
+                    viewWorkoutModal.show();
+                }
+            });
+
+            calendar.render();
+
+            document.getElementById('saveWorkoutBtn').addEventListener('click', function () {
+                let dateVal = document.getElementById('workoutDate').value;
+                let startT = document.getElementById('workoutStartTime').value;
+                let endT = document.getElementById('workoutEndTime').value;
+
+                var model = {
+                    StartDate: dateVal + (startT ? "T" + startT + ":00" : "T00:00:00"),
+                    EndDate: endT ? (dateVal + "T" + endT + ":00") : null,
+                    Title: document.getElementById('workoutTitle').value,
+                    Description: document.getElementById('workoutDescription').value
+                };
+
+                if(!model.Title) {
+                    gymAlert("Wpisz tytuł treningu!");
+                    return;
+                }
+
+                let nowForCreate = new Date();
+                nowForCreate.setSeconds(0, 0); // Zerujemy sekundy, żeby można było dodać na bieżącą minutę, ale nie starszą
+                if (new Date(model.StartDate) < nowForCreate) {
+                    gymAlert("Trening nie może rozpoczynać się w przeszłości!");
+                    return;
+                }
+
+                fetch('/Klient/SaveWorkout', {
+                    method: 'POST',
+                    headers: { 
+                                'Content-Type': 'application/json',
+                                'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                            },
+                    body: JSON.stringify(model)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        calendar.addEvent({
+                            id: data.id,
+                            title: model.Title,
+                            start: model.StartDate,
+                            end: model.EndDate,
+                            description: model.Description
+                        });
+                        workoutModal.hide();
+                    } else {
+                        gymAlert(data.message || 'Błąd podczas zapisu treningu!', 'error');
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+            });
+
+            document.getElementById('deleteWorkoutBtn').addEventListener('click', function () {
+                var wId = document.getElementById('viewWorkoutId').value;
+                gymConfirm("Czy na pewno chcesz bezpowrotnie usunąć ten trening ze swojego widoku kalendarza?", function() {
+                    fetch('/Klient/DeleteWorkout', {
+                        method: 'POST',
+                        headers: { 
+                                'Content-Type': 'application/json',
+                                'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                            },
+                        body: JSON.stringify(wId)
+                    })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.success) {
+                            if(activeEvent) activeEvent.remove();
+                            viewWorkoutModal.hide();
+                            gymAlert('Trening zlikwidowany!', 'success');
+                        } else {
+                            gymAlert('Błąd usuwania!', 'error');
+                        }
+                    });
+                });
+            });
+
+            document.getElementById('editWorkoutBtn').addEventListener('click', function () {
+                var wId = document.getElementById('viewWorkoutId').value;
+                var newTitle = document.getElementById('viewWorkoutTitle').value;
+                var newDesc = document.getElementById('viewWorkoutDescription').value;
+                let dateVal = document.getElementById('viewWorkoutDate').value;
+                let startT = document.getElementById('viewWorkoutStartTime').value;
+                let endT = document.getElementById('viewWorkoutEndTime').value;
+
+                if (!newTitle) { gymAlert("Tytuł treningu nie może być pusty!"); return; }
+
+                var editModel = {
+                    Id: parseInt(wId),
+                    StartDate: dateVal + (startT ? "T" + startT + ":00" : "T00:00:00"),
+                    EndDate: endT ? (dateVal + "T" + endT + ":00") : null,
+                    Title: newTitle,
+                    Description: newDesc
+                };
+
+                let newStart = new Date(editModel.StartDate);
+                let originalStart = activeEvent ? activeEvent.start : null;
+                let nowForEdit = new Date();
+                nowForEdit.setSeconds(0, 0);
+                
+                // Blokujemy tylko jeśli KTOŚ ZMIENIŁ datę/godzinę na starą
+                if (originalStart && newStart.getTime() !== originalStart.getTime() && newStart < nowForEdit) {
+                    gymAlert("Nie można przenieść treningu w przeszłość!");
+                    return;
+                }
+
+                fetch('/Klient/EditWorkout', {
+                    method: 'POST',
+                    headers: { 
+                                'Content-Type': 'application/json',
+                                'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                            },
+                    body: JSON.stringify(editModel)
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        if (activeEvent) {
+                            activeEvent.setProp('title', newTitle);
+                            activeEvent.setExtendedProp('description', newDesc);
+                            activeEvent.setDates(editModel.StartDate, editModel.EndDate);
+                        }
+                        viewWorkoutModal.hide();
+                        gymAlert('Zmiany zapisane pomyślnie!', 'success');
+                    } else {
+                        gymAlert(data.message || 'Błąd podczas zapisywania edycji!', 'error');
+                    }
+                })
+                .catch(err => console.error("Error editing", err));
+            });
+        });
+    </script>
+}

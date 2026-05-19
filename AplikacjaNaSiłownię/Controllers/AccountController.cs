@@ -1,0 +1,271 @@
+using AplikacjaNaSiłownię.Models;
+using AplikacjaNaSiłownię.Models.ViewModels;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+
+namespace AplikacjaNaSiłownię.Controllers
+{
+    // Wykorzystujemy Primary Constructor (C# 12) do wstrzykiwania zależności w jednej linii.
+    public class AccountController(
+        UserManager<ApplicationUser> userManager,
+        SignInManager<ApplicationUser> signInManager,
+        RoleManager<IdentityRole> roleManager,
+        AplikacjaNaSiłownię.Data.ApplicationDbContext context,
+        Services.IUserService userService,
+        IWebHostEnvironment webHostEnvironment,
+        Services.INotificationService notificationService) : Controller
+    {
+        private readonly UserManager<ApplicationUser> _userManager = userManager;
+        private readonly SignInManager<ApplicationUser> _signInManager = signInManager;
+        private readonly RoleManager<IdentityRole> _roleManager = roleManager;
+        private readonly AplikacjaNaSiłownię.Data.ApplicationDbContext _context = context;
+        private readonly Services.IUserService _userService = userService;
+        private readonly IWebHostEnvironment _webHostEnvironment = webHostEnvironment;
+        private readonly Services.INotificationService _notificationService = notificationService;
+
+        [HttpGet]
+        public IActionResult Register()
+        {
+            return View();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken] // Zabezpieczenie przed atakami CSRF
+        // Ograniczamy liczbę prób rejestracji (Rate Limiting), aby zapobiec botom tworzącym masowo konta.
+        [EnableRateLimiting("LoginPolicy")]
+        public async Task<IActionResult> Register(RegisterViewModel model)
+        {
+            if (ModelState.IsValid)
+            {
+                // BIAŁA LISTA RÓL: Zabezpieczenie serwerowe przed nieuprawnionym przypisaniem roli.
+                // Akceptujemy tylko "Trener" i "Klient". Każda inna wartość (np. "Admin" wstrzyknięty przez F12)
+                // zostanie natychmiast odrzucona.
+                if (model.Rola != "Trener" && model.Rola != "Klient")
+                {
+                    ModelState.AddModelError(string.Empty, "Wybrana rola jest nieprawidłowa. Możesz zarejestrować się tylko jako Trener lub Klient.");
+                    return View(model);
+                }
+
+                var user = new ApplicationUser
+                {
+                    UserName = model.Email,
+                    Email = model.Email,
+                    Imie = model.Imie,
+                    Nazwisko = model.Nazwisko,
+                    Rola = model.Rola
+                };
+
+                // TODO: W produkcji użyć silniejszych polityk haseł i dodatkowej walidacji złożoności po stronie serwera
+                var result = await _userManager.CreateAsync(user, model.Password);
+
+                if (result.Succeeded)
+                {
+                    // Upewnienie się, że role istnieją
+                    if (!await _roleManager.RoleExistsAsync("Admin"))
+                        await _roleManager.CreateAsync(new IdentityRole("Admin"));
+                    if (!await _roleManager.RoleExistsAsync("Trener"))
+                        await _roleManager.CreateAsync(new IdentityRole("Trener"));
+                    if (!await _roleManager.RoleExistsAsync("Klient"))
+                        await _roleManager.CreateAsync(new IdentityRole("Klient"));
+
+                    await _userManager.AddToRoleAsync(user, model.Rola);
+
+                    if (model.Rola == "Trener")
+                    {
+                        user.IsApproved = false;
+                        await _userManager.UpdateAsync(user); // Aktualizacja po przypisaniu ról dla pewności
+
+                        // Powiadomienie wszystkich administratorów o nowej rejestracji trenera
+                        var admins = await _userManager.GetUsersInRoleAsync("Admin");
+                        foreach (var admin in admins)
+                        {
+                            await _notificationService.SendNotificationAsync(
+                                admin.Id,
+                                "Nowy Trener do weryfikacji",
+                                $"Użytkownik {user.Imie} {user.Nazwisko} ({user.Email}) zarejestrował się jako Trener i oczekuje na zatwierdzenie konta.",
+                                "System"
+                            );
+                        }
+
+                        TempData["RegistrationSuccess"] = "Twoje konto trenera zostało pomyślnie utworzone, jednak wymaga zatwierdzenia przez administratora. Zalogowanie będzie możliwe po akceptacji.";
+                        return RedirectToAction("Login", "Account");
+                    }
+
+                    await _signInManager.SignInAsync(user, isPersistent: false);
+                    return RedirectToAction("Index", "Home");
+                }
+
+                foreach (var error in result.Errors)
+                {
+                    ModelState.AddModelError(string.Empty, error.Description);
+                }
+            }
+
+            return View(model);
+        }
+
+        [HttpGet]
+        public IActionResult Login()
+        {
+            return View();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken] // Zabezpieczenie przed atakami CSRF
+        // Krytyczne zabezpieczenie: Rate Limiting chroni endpoint logowania przed automatycznymi atakami Brute Force.
+        [EnableRateLimiting("LoginPolicy")]
+        public async Task<IActionResult> Login(LoginViewModel model)
+        {
+            if (ModelState.IsValid)
+            {
+                // Szukamy po adresie e-mail LUB po nazwie użytkownika (UserName)
+                var user = await _userManager.FindByEmailAsync(model.Email) ?? await _userManager.FindByNameAsync(model.Email);
+
+                if (user == null)
+                {
+                    // Zapobieganie User Enumeration (nie zdradzamy czy e-mail istnieje)
+                    ModelState.AddModelError(string.Empty, "Nieprawidłowy e-mail lub hasło.");
+                    return View(model);
+                }
+
+                // Blokujemy logowanie TYLKO dla Trenerów, którzy nie są zatwierdzeni.
+                // Klienci i Admini (szczególnie ci założeni przed dodaniem pola IsApproved)
+                // mogą się logować bez przeszkód.
+                if (user.Rola == "Trener" && !user.IsApproved)
+                {
+                    ModelState.AddModelError(string.Empty, "Konto oczekuje na zatwierdzenie przez administratora. Spróbuj ponownie później.");
+                    return View(model);
+                }
+
+                // Włączenie zabezpieczenia przed Brute Force (lockoutOnFailure: true)
+                var result = await _signInManager.PasswordSignInAsync(user, model.Password, isPersistent: false, lockoutOnFailure: true);
+
+                if (result.Succeeded)
+                {
+                    return RedirectToAction("Index", "Home");
+                }
+
+                // Zapobieganie User Enumeration
+                ModelState.AddModelError(string.Empty, "Nieprawidłowy e-mail lub hasło.");
+            }
+
+            return View(model);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken] // Zabezpieczenie przed atakami CSRF
+        public async Task<IActionResult> Logout()
+        {
+            await _signInManager.SignOutAsync();
+            TempData["SuccessMessage"] = "Wylogowano pomyślnie.";
+            return RedirectToAction("Index", "Home");
+        }
+
+        [HttpGet]
+        [Microsoft.AspNetCore.Authorization.Authorize]
+        public async Task<IActionResult> Profile()
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+            {
+                return NotFound("Nie znaleziono użytkownika.");
+            }
+
+            if (user.Rola == "Klient" && !string.IsNullOrEmpty(user.TrenerId))
+            {
+                var trener = await _userManager.FindByIdAsync(user.TrenerId);
+                if (trener != null)
+                {
+                    ViewBag.TrenerName = $"{trener.Imie} {trener.Nazwisko}";
+                }
+            }
+
+            return View(user);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UploadProfilePicture(IFormFile profilePicture)
+        {
+            var userId = _userManager.GetUserId(User);
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+            // Używamy profesjonalnego sposobu pobierania ścieżki do wwwroot
+            var webRootPath = _webHostEnvironment.WebRootPath;
+            
+            var success = await _userService.UpdateProfilePictureAsync(userId, profilePicture, webRootPath);
+
+            if (success)
+            {
+                TempData["SuccessMessage"] = "Zdjęcie profilowe zostało zaktualizowane!";
+            }
+            else
+            {
+                TempData["ErrorMessage"] = "Błąd podczas przesyłania zdjęcia (zły format lub zbyt duży rozmiar).";
+            }
+
+            return RedirectToAction("Profile");
+        }
+
+        // Akcja asynchroniczna obsługująca żądanie zmiany hasła wysłane przez AJAX.
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto model)
+        {
+            // Administrator nie może zmieniać hasła z poziomu profilu (dodatkowe zabezpieczenie).
+            if (User.IsInRole("Admin"))
+            {
+                return Json(new { success = false, message = "Administrator nie może zmieniać hasła z poziomu profilu." });
+            }
+
+            // Walidacja zgodności nowych haseł (podstawowe zabezpieczenie UX).
+            if (model.NewPassword != model.ConfirmPassword)
+            {
+                return Json(new { success = false, message = "Nowe hasła nie są identyczne." });
+            }
+
+            // Pobranie unikalnego identyfikatora obecnie zalogowanego użytkownika.
+            var userId = _userManager.GetUserId(User);
+
+            // Zabezpieczenie przed wygaśnięciem sesji i ostrzeżeniami kompilatora o wartości null.
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Json(new { success = false, message = "Twoja sesja wygasła. Zaloguj się ponownie." });
+            }
+
+            // Wywołanie warstwy serwisu (Service Layer) zgodnie z zasadą separacji odpowiedzialności.
+            var result = await _userService.ChangePasswordAsync(userId, model.CurrentPassword, model.NewPassword);
+
+            if (result.Succeeded)
+            {
+                return Json(new { success = true, message = "Hasło zostało pomyślnie zmienione!" });
+            }
+
+            // Jeśli dojdziemy tutaj, to znaczy, że zmiana hasła się NIE udała.
+            // Musimy sprawdzić dlaczego i poinformować o tym użytkownika po polsku.
+
+            // Pobieramy pierwszy napotkany błąd z listy błędów zwróconych przez system Identity.
+            var error = result.Errors.FirstOrDefault();
+            string errorMessage = "Wystąpił błąd podczas zmiany hasła.";
+
+            if (error != null)
+            {
+                // System Identity zwraca kody błędów. "PasswordMismatch" oznacza, 
+                // że użytkownik wpisał złe OBECNE hasło w pierwszym polu.
+                if (error.Code == "PasswordMismatch")
+                {
+                    errorMessage = "Obecne hasło jest nieprawidłowe. Spróbuj ponownie.";
+                }
+                else
+                {
+                    // Jeśli wystąpił inny błąd (np. nowe hasło jest zbyt krótkie), 
+                    // pobieramy jego opis przygotowany przez system.
+                    errorMessage = error.Description;
+                }
+            }
+
+            return Json(new { success = false, message = errorMessage });
+        }
+    }
+}

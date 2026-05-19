@@ -1,0 +1,462 @@
+@{
+    // Definiujemy tytuł strony w silniku Razor.
+
+    ViewData["Title"] = "Panel Statystyk";
+
+
+
+    // Dodajemy specjalną klasę stylów dla tła panelu statystyk.
+
+    ViewData["BodyClass"] = "bg-dashboard";
+}
+
+<style>
+    /* Stylowanie aktywnego przycisku z neonowym podświetleniem */
+    .btn-outline-neon.active {
+        background-color: var(--gym-neon) !important;
+        color: #000 !important;
+        box-shadow: 0 0 15px rgba(57, 255, 20, 0.4) !important;
+    }
+</style>
+
+<!-- NAGŁÓWEK STRONY -->
+<div class="row mb-4">
+    <div class="col-12">
+        <h2 class="text-neon text-uppercase fw-bold mb-0">🏆 Panel Statystyk i Wyników</h2>
+        <p class="text-white-50">Przeglądaj statystyki aktywności fizycznej oraz wyniki treningów.</p>
+    </div>
+</div>
+
+<!-- SEKCJA A: LISTA ROZWIJANA (DROPDOWN) DLA ADMINA I TRENERA -->
+@if (User.IsInRole("Admin") || User.IsInRole("Trener"))
+
+{
+
+    // Ten panel renderuje się TYLKO wtedy, gdy zalogowany użytkownik ma uprawnienia trenera lub administratora.
+    <div class="card gym-card p-4 mb-4">
+        <div class="row align-items-center">
+            <div class="col-lg-4 col-md-5">
+                <h5 class="text-white fw-bold mb-md-0 mb-2">
+                    <i class="bi bi-person-bounding-box text-neon me-2"></i> Podgląd profilu klienta:
+                </h5>
+            </div>
+            <div class="col-lg-8 col-md-7">
+                <!-- Dropdown z listą klientów. Zmiana opcji wywoła funkcję JavaScript aktualizującą wykresy. -->
+                <select id="clientSelect" class="form-select gym-input fs-5 py-2 border-neon">
+                    @if (ViewBag.Clients != null && ((List<ApplicationUser>)ViewBag.Clients).Count > 0)
+                    {
+
+                        // Iterujemy po liście klientów przekazanej z kontrolera przez ViewBag.
+
+                        foreach (var client in (List<ApplicationUser>)ViewBag.Clients)
+
+                        {
+                            <option value="@client.Id">@client.Imie @client.Nazwisko</option>
+                        }
+                    }
+                    else
+                    {
+                        <option value="">Brak zarejestrowanych klientów</option>
+                    }
+                </select>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- SEKCJA B: SZCZEGÓŁOWY PANEL DANYCH I WYKRESÓW POJEDYNCZEGO KLIENTA -->
+<!-- Pokazuje się każdemu użytkownikowi (Klient widzi swoje, a Admin/Trener widzi dane wybranego z listy klienta). -->
+<div class="card gym-card p-4 mb-4">
+    <h4 class="text-white fw-bold mb-4" id="clientDashboardTitle">
+        <i class="bi bi-person-circle text-neon me-2"></i> Statystyki Klienta: <span class="text-neon"
+            id="clientNameHeader">Ładowanie...</span>
+    </h4>
+
+    <!-- KAFELKI PODSUMOWUJĄCE DANE LICZBOWE -->
+    <div class="row g-4 mb-4">
+        <!-- 1. Wszystkie Treningi -->
+        <div class="col-md-3">
+            <div class="card bg-dark border-secondary p-3 text-center">
+                <h6 class="text-white-50 text-uppercase fw-bold small">Wszystkie Treningi</h6>
+                <h2 class="text-neon fw-bold my-2" id="clientTotalWorkouts">0</h2>
+            </div>
+        </div>
+        <!-- 2. Zrealizowane Treningi -->
+        <div class="col-md-3">
+            <div class="card bg-dark border-secondary p-3 text-center">
+                <h6 class="text-white-50 text-uppercase fw-bold small">Zrealizowane</h6>
+                <h2 class="text-neon fw-bold my-2" id="clientCompletedWorkouts">0</h2>
+            </div>
+        </div>
+        <!-- 3. Nadchodzące Treningi -->
+        <div class="col-md-3">
+            <div class="card bg-dark border-secondary p-3 text-center">
+                <h6 class="text-white-50 text-uppercase fw-bold small">Nadchodzące</h6>
+                <h2 class="text-warning fw-bold my-2" id="clientPlannedWorkouts">0</h2>
+            </div>
+        </div>
+        <!-- 4. Odwołane Treningi -->
+        <div class="col-md-3">
+            <div class="card bg-dark border-secondary p-3 text-center">
+                <h6 class="text-white-50 text-uppercase fw-bold small">Odwołane</h6>
+                <h2 class="text-danger fw-bold my-2" id="clientCancelledWorkouts">0</h2>
+            </div>
+        </div>
+    </div>
+
+    <!-- SEKCJA WYKRESÓW WIZUALNYCH -->
+    <div class="row g-4">
+        <!-- Wykres Liniowy (Aktywność) -->
+        <div class="col-lg-8">
+            <div class="card bg-dark border-secondary p-3 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                    <h6 class="text-white fw-bold mb-0" id="activityChartTitle">
+                        <i class="bi bi-graph-up-arrow text-neon me-2"></i> Aktywność w ostatnich 6 miesiącach
+                    </h6>
+                    <!-- Przełącznik czasu (Miesiąc / Tydzień / Dzień) -->
+                    <div class="btn-group btn-group-sm" role="group" aria-label="Przełącznik zakresu czasu">
+                        <button type="button" class="btn btn-outline-neon active timeframe-btn" data-timeframe="month">Miesiąc</button>
+                        <button type="button" class="btn btn-outline-neon timeframe-btn" data-timeframe="week">Tydzień</button>
+                        <button type="button" class="btn btn-outline-neon timeframe-btn" data-timeframe="day">Dzień</button>
+                    </div>
+                </div>
+                <!-- Kontener o stałej wysokości dla prawidłowego zachowania responsywności wykresu -->
+                <div style="position: relative; height: 320px;">
+                    <!-- Element <canvas> w którym Chart.js wyrenderuje wykres liniowy -->
+                    <canvas id="clientLineChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Wykres Kołowy (Podział statusów treningów) -->
+        <div class="col-lg-4">
+            <div class="card bg-dark border-secondary p-3 h-100">
+                <h6 class="text-white fw-bold mb-3">
+                    <i class="bi bi-pie-chart text-neon me-2"></i> Podział statusów
+                </h6>
+                <!-- Kontener centrujący wykres kołowy -->
+                <div style="position: relative; height: 320px;"
+                    class="d-flex align-items-center justify-content-center">
+                    <!-- Element <canvas> w którym Chart.js wyrenderuje wykres kołowy -->
+                    <canvas id="clientPieChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SEKCJA C: GLOBALNE PODSUMOWANIE TRENERA (Widoczne TYLKO dla roli Trenera) -->
+<!-- Prezentuje łączne wyniki biznesowe trenera oraz aktywność wszystkich jego podopiecznych. -->
+@if (User.IsInRole("Trener"))
+
+{
+    <div class="card gym-card p-4 mt-5">
+        <h4 class="text-white fw-bold mb-4">
+            <i class="bi bi-speedometer2 text-neon me-2"></i> Panel Zarządzania Trenera: Podsumowanie Ogólne
+        </h4>
+
+        <!-- KAFELKI PODSUMOWUJĄCE DLA TRENERA -->
+        <div class="row g-4 mb-4">
+            <!-- 1. Łączna liczba przypisanych Klientów -->
+            <div class="col-md-3">
+                <div class="card bg-dark border-secondary p-3 text-center">
+                    <h6 class="text-white-50 text-uppercase fw-bold small">Moi Klienci</h6>
+                    <h2 class="text-neon fw-bold my-2" id="totalClients">0</h2>
+                </div>
+            </div>
+            <!-- 2. Wszystkie zaplanowane lekcje w systemie -->
+            <div class="col-md-3">
+                <div class="card bg-dark border-secondary p-3 text-center">
+                    <h6 class="text-white-50 text-uppercase fw-bold small">Zaplanowane Treningi</h6>
+                    <h2 class="text-neon fw-bold my-2" id="totalWorkouts">0</h2>
+                </div>
+            </div>
+            <!-- 3. Najbardziej Aktywny Podopieczny (Lider zaangażowania) -->
+            <div class="col-md-3">
+                <div class="card bg-dark border-secondary p-3 text-center">
+                    <h6 class="text-white-50 text-uppercase fw-bold small">Lider Aktywności</h6>
+                    <h6 class="text-warning fw-bold my-2" id="mostActiveClient"
+                        style="font-size: 0.95rem; line-height: 1.4;">Wczytywanie...</h6>
+                </div>
+            </div>
+            <!-- 4. Suma wszystkich odwołanych sesji u klientów -->
+            <div class="col-md-3">
+                <div class="card bg-dark border-secondary p-3 text-center">
+                    <h6 class="text-white-50 text-uppercase fw-bold small">Odwołane Razem</h6>
+                    <h2 class="text-danger fw-bold my-2" id="cancelledWorkouts">0</h2>
+                </div>
+            </div>
+        </div>
+
+        <!-- WYKRESY ZBIORCZE TRENERA -->
+        <div class="row g-4">
+            <!-- Wykres Słupkowy (Porównanie zrealizowanych treningów u każdego klienta) -->
+            <div class="col-lg-8">
+                <div class="card bg-dark border-secondary p-3 h-100">
+                    <h6 class="text-white fw-bold mb-3">
+                        <i class="bi bi-bar-chart-line text-neon me-2"></i> Zrealizowane treningi u każdego podopiecznego
+                    </h6>
+                    <div style="position: relative; height: 320px;">
+                        <canvas id="trainerBarChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Wykres Pączka (Globalny podział statusów lekcji) -->
+            <div class="col-lg-4">
+                <div class="card bg-dark border-secondary p-3 h-100">
+                    <h6 class="text-white fw-bold mb-3">
+                        <i class="bi bi-pie-chart text-neon me-2"></i> Ogólny status wszystkich treningów
+                    </h6>
+                    <div style="position: relative; height: 320px;"
+                        class="d-flex align-items-center justify-content-center">
+                        <canvas id="trainerDoughnutChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- SEKCJA SCRIPTS: INTERAKCJA JAVASCRIPT & CHART.JS -->
+@section Scripts {
+    <!-- Pobieramy darmową, szybką i bezpieczną bibliotekę wykresów Chart.js z serwera CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Definiujemy neonowe stałe kolorystyczne zgodne ze stylem graficznym naszej siłowni
+            const neonGreen = '#39ff14';
+            const neonBlue = '#00d2ff';
+
+            // Zmienne przechowujące instancje wykresów klienta.
+            // Przed każdym nowym rysowaniem musimy wywołać na nich metodę .destroy(), aby zapobiec nakładaniu się wykresów w pamięci przeglądarki.
+            let clientLineChartInstance = null;
+            let clientPieChartInstance = null;
+
+            // Globalny stan przechowujący aktualnie wybrany zakres czasu (domyślnie "month")
+            let currentTimeframe = 'month';
+
+            /**
+             * Główna funkcja AJAX pobierająca dane z backendu i rysująca wykresy klienta.
+             * param {string} clientId - opcjonalne ID wybranego klienta (dla Admina/Trenera)
+             * param {string} timeframe - zakres czasu ('month', 'week', 'day')
+             */
+            function loadClientStats(clientId, timeframe) {
+                if (timeframe) {
+                    currentTimeframe = timeframe;
+                }
+
+                // Automatycznie pobieramy aktualną wartość z dropdownu (jeśli istnieje i clientId jest puste)
+                const selectedClientId = clientId || (clientSelect ? clientSelect.value : null);
+
+                // Budujemy adres URL z zachowaniem wybranego timeframe i ewentualnego ID klienta
+                let url = '/Dashboard/GetClientStats?timeframe=' + encodeURIComponent(currentTimeframe);
+                if (selectedClientId) {
+                    url += '&clientId=' + encodeURIComponent(selectedClientId);
+                }
+
+                // Wysyłamy asynchroniczne żądanie sieciowe (HTTP GET)
+                fetch(url)
+                    .then(response => response.json())
+                    .then(data => {
+                        // Jeśli baza jest całkowicie pusta i nie ma żadnych klientów
+                        if (data.noClients) {
+                            document.getElementById('clientNameHeader').innerText = "Brak klientów";
+                            return;
+                        }
+
+                        // Aktualizujemy etykiety tekstowe i kafelki na stronie danymi z bazy danych
+                        document.getElementById('clientNameHeader').innerText = data.clientName;
+                        document.getElementById('clientTotalWorkouts').innerText = data.totalWorkouts;
+                        document.getElementById('clientCompletedWorkouts').innerText = data.completedWorkouts;
+                        document.getElementById('clientPlannedWorkouts').innerText = data.plannedWorkouts;
+                        document.getElementById('clientCancelledWorkouts').innerText = data.cancelledWorkouts;
+
+                        // --- 1. RYSOWANIE WYKRESU LINIOWEGO (Aktywność 6 miesięcy) ---
+
+                        // Bezpieczne niszczenie poprzedniej instancji wykresu przed narysowaniem nowego
+                        if (clientLineChartInstance) {
+                            clientLineChartInstance.destroy();
+                        }
+
+                        const lineCtx = document.getElementById('clientLineChart').getContext('2d');
+
+                        // Tworzymy piękny pionowy gradient, który będzie rozlewał się pod linią wykresu
+                        const lineGradient = lineCtx.createLinearGradient(0, 0, 0, 300);
+                        lineGradient.addColorStop(0, 'rgba(0, 210, 255, 0.4)'); // Półprzezroczysty błękit u góry
+                        lineGradient.addColorStop(1, 'rgba(0, 210, 255, 0.0)'); // Całkowity zanik u dołu
+
+                        // Inicjalizujemy nowy wykres liniowy
+                        clientLineChartInstance = new Chart(lineCtx, {
+                            type: 'line',
+                            data: {
+                                labels: data.chartLabels, // Miesiące (np. "Styczeń 2026", "Luty 2026"...)
+                                datasets: [{
+                                    label: 'Odbyte treningi',
+                                    data: data.chartData, // Liczby odbytych lekcji w danym miesiącu
+                                    fill: true,
+                                    backgroundColor: lineGradient,
+                                    borderColor: neonBlue,
+                                    borderWidth: 3,
+                                    tension: 0.4, // Delikatne zaokrąglenie linii (brak ostrych kątów)
+                                    pointBackgroundColor: neonBlue,
+                                    pointBorderColor: '#fff',
+                                    pointHoverRadius: 8 // Zwiększenie kropki po najechaniu myszką
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: { legend: { display: false } }, // Ukrywamy legendę (mamy własne czytelne opisy)
+                                scales: {
+                                    x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#aaa' } },
+                                    y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#aaa', stepSize: 1 } }
+                                }
+                            }
+                        });
+
+                        // --- 2. RYSOWANIE WYKRESU KOŁOWEGO (Statusy treningów) ---
+
+                        if (clientPieChartInstance) {
+                            clientPieChartInstance.destroy();
+                        }
+
+                        const pieCtx = document.getElementById('clientPieChart').getContext('2d');
+                        clientPieChartInstance = new Chart(pieCtx, {
+                            type: 'pie',
+                            data: {
+                                labels: ['Zrealizowane', 'Zaplanowane', 'Odwołane'],
+                                datasets: [{
+                                    data: [data.completedWorkouts, data.plannedWorkouts, data.cancelledWorkouts],
+                                    // Spójne barwy systemowe: Zrealizowane = Zielony, Zaplanowane = Niebieski, Odwołane = Czerwony
+                                    backgroundColor: ['rgba(25, 135, 84, 0.75)', 'rgba(13, 110, 253, 0.75)', 'rgba(220, 53, 69, 0.75)'],
+                                    borderColor: ['#198754', '#0d6efd', '#dc3545'],
+                                    borderWidth: 2
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: { position: 'bottom', labels: { color: '#fff', padding: 10 } }
+                                }
+                            }
+                        });
+                    })
+                    .catch(err => console.error("Błąd ładowania statystyk klienta:", err));
+            }
+
+            // Obsługa mechanizmu listy wyboru (dropdown):
+            const clientSelect = document.getElementById('clientSelect');
+            if (clientSelect) {
+                // Jeśli dropdown istnieje (rola Admin/Trener), ładujemy statystyki dla pierwszego wybranego klienta z listy
+                loadClientStats(clientSelect.value);
+
+                // Rejestrujemy zdarzenie 'change' (zmiana wyboru w dropdownie)
+                clientSelect.addEventListener('change', function () {
+                    loadClientStats(this.value); // Pobieramy i rysujemy dane nowo wybranego klienta
+                });
+            } else {
+                // Jeśli dropdownu nie ma (rola Klient), po prostu ładujemy statystyki dla obecnie zalogowanego profilu
+                loadClientStats();
+            }
+
+            // Obsługa kliknięć przycisków wyboru zakresu czasu (Miesiąc / Tydzień / Dzień)
+            document.querySelectorAll('.timeframe-btn').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    // Wyłączamy klasę aktywności ze wszystkich przycisków i dodajemy do klikniętego
+                    document.querySelectorAll('.timeframe-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+
+                    const timeframe = this.getAttribute('data-timeframe');
+                    
+                    // Uaktualniamy tytuł wykresu
+                    const chartTitle = document.getElementById('activityChartTitle');
+                    if (chartTitle) {
+                        if (timeframe === 'month') {
+                            chartTitle.innerHTML = '<i class="bi bi-graph-up-arrow text-neon me-2"></i> Aktywność w ostatnich 6 miesiącach';
+                        } else if (timeframe === 'week') {
+                            chartTitle.innerHTML = '<i class="bi bi-graph-up-arrow text-neon me-2"></i> Aktywność w ostatnich 6 tygodniach';
+                        } else if (timeframe === 'day') {
+                            chartTitle.innerHTML = '<i class="bi bi-graph-up-arrow text-neon me-2"></i> Aktywność w ostatnich 7 dniach';
+                        }
+                    }
+                    
+                    // Ładujemy dane dla wybranego zakresu czasu (automatycznie odczytując aktualnie wybranego klienta)
+                    loadClientStats(null, timeframe);
+                });
+            });
+
+            // --- SEKCJA INICJALIZACJI PANELU TRENERA (AGREGACJA CAŁOŚCIOWA) ---
+            const isTrainer = @(User.IsInRole("Trener") ? "true" : "false");
+            if (isTrainer) {
+                // Pobieramy dane podsumowujące dla trenera z dedykowanego endpointu
+                fetch('/Dashboard/GetTrainerStats')
+                    .then(response => response.json())
+                    .then(data => {
+                        // Wypełniamy kafelki zbiorcze trenera
+                        document.getElementById('totalClients').innerText = data.totalClients;
+                        document.getElementById('totalWorkouts').innerText = data.totalWorkouts;
+                        document.getElementById('mostActiveClient').innerText = data.mostActiveClientName;
+                        document.getElementById('cancelledWorkouts').innerText = data.cancelledWorkouts;
+
+                        // Rysowanie wykresu słupkowego aktywności podopiecznych
+                        const barCtx = document.getElementById('trainerBarChart').getContext('2d');
+
+                        // Tworzymy pionowy gradient neonowo-zielony dla słupków
+                        const barGradient = barCtx.createLinearGradient(0, 0, 0, 400);
+                        barGradient.addColorStop(0, 'rgba(57, 255, 20, 0.8)');
+                        barGradient.addColorStop(1, 'rgba(57, 255, 20, 0.1)');
+
+                        new Chart(barCtx, {
+                            type: 'bar',
+                            data: {
+                                labels: data.chartLabels, // Nazwy poszczególnych klientów
+                                datasets: [{
+                                    label: 'Liczba treningów',
+                                    data: data.chartData, // Ilość odbytych treningów u każdego
+                                    backgroundColor: barGradient,
+                                    borderColor: neonGreen,
+                                    borderWidth: 2,
+                                    borderRadius: 8 // Zaokrąglone narożniki słupków wykresu
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: { legend: { display: false } },
+                                scales: {
+                                    x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#aaa' } },
+                                    y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#aaa', stepSize: 1 } }
+                                }
+                            }
+                        });
+
+                        // Rysowanie wykresu pączka (Doughnut) dla globalnego podziału statusów trenera
+                        const doughnutCtx = document.getElementById('trainerDoughnutChart').getContext('2d');
+                        new Chart(doughnutCtx, {
+                            type: 'doughnut',
+                            data: {
+                                labels: ['Zrealizowane', 'Zaplanowane', 'Odwołane'],
+                                datasets: [{
+                                    data: [data.completedWorkouts, data.plannedWorkouts, data.cancelledWorkouts],
+                                    backgroundColor: ['rgba(25, 135, 84, 0.75)', 'rgba(13, 110, 253, 0.75)', 'rgba(220, 53, 69, 0.75)'],
+                                    borderColor: ['#198754', '#0d6efd', '#dc3545'],
+                                    borderWidth: 2
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: { position: 'bottom', labels: { color: '#fff', padding: 10 } }
+                                }
+                            }
+                        });
+                    })
+                    .catch(err => console.error("Błąd ładowania statystyk trenera:", err));
+            }
+        });
+    </script>
+}

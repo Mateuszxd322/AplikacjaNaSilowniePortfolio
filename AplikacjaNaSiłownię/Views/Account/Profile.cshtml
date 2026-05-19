@@ -1,0 +1,259 @@
+@model AplikacjaNaSiłownię.Models.ApplicationUser
+
+@{
+    ViewData["Title"] = "Moje Konto";
+
+    // Tło zależy od roli użytkownika
+
+    ViewData["BodyClass"] = Model.Rola == "Admin" ? "bg-admin-panel" : (Model.Rola == "Trener" ? "" : "bg-calendar-view");
+}
+
+<div class="row mb-4">
+    <div class="col-12 text-center">
+        <h2 class="text-neon text-uppercase fw-bold">Twój Profil</h2>
+        <p class="text-white-50">Zarządzaj swoimi danymi</p>
+    </div>
+</div>
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card gym-card border-0 shadow-lg">
+            <div class="card-body p-4 p-md-5">
+
+
+                <div class="text-center mb-4">
+                    <div class="profile-picture-container position-relative d-inline-block mb-3">
+                        @if (!string.IsNullOrEmpty(Model.ProfilePicturesPath))
+
+
+
+                        {
+                            <img src="~/uploads/profiles/@Model.ProfilePicturesPath"
+                                class="rounded-circle img-thumbnail shadow gym-profile-img" alt="Zdjęcie profilowe"
+                                style="width: 150px; height: 150px; object-fit: cover; cursor: pointer;"
+                                onclick="document.getElementById('profilePictureInput').click();" />
+                        }
+
+
+
+                        else
+
+
+
+                        {
+                            <div class="rounded-circle img-thumbnail shadow gym-profile-img d-flex align-items-center justify-content-center bg-dark text-neon"
+                                style="width: 150px; height: 150px; cursor: pointer;"
+                                onclick="document.getElementById('profilePictureInput').click();">
+                                <i class="bi bi-person-fill" style="font-size: 4rem;"></i>
+                            </div>
+                        }
+                        <div class="position-absolute bottom-0 end-0 bg-neon text-dark rounded-circle p-2 shadow-sm"
+                            style="cursor: pointer; width: 35px; height: 35px; display: flex; align-items: center; justify-content: center;" onclick="document.getElementById('profilePictureInput').click();">
+                            <i class="bi bi-camera-fill"></i>
+                        </div>
+                    </div>
+
+                    <h3 class="text-white fw-bold mb-1">@Model.Imie @Model.Nazwisko</h3>
+                    <p class="text-muted mb-0">@Model.Email</p>
+
+                    <!-- Ukryty formularz do przesyłania zdjęcia -->
+                    <form asp-action="UploadProfilePicture" method="post" enctype="multipart/form-data"
+                        id="profilePictureForm" class="d-none">
+                        <input type="file" name="profilePicture" id="profilePictureInput"
+                            onchange="previewProfilePicture(this)"
+                            accept=".jpg,.jpeg,.png" />
+                    </form>
+                </div>
+            </div>
+
+            <hr class="border-secondary mb-4" />
+
+            <h5 class="text-neon mb-3"><i class="bi bi-info-square me-2"></i>Szczegóły konta</h5>
+
+            <div class="row mb-3">
+                <div class="col-sm-4 text-white-50">Rola w systemie:</div>
+                <div class="col-sm-8 text-white fw-bold">
+                    @if (Model.Rola == "Admin")
+
+                    {
+                        <span class="badge bg-danger text-white">Administrator</span>
+                    }
+
+                    else if (Model.Rola == "Trener")
+
+
+
+                    {
+                        <span class="badge bg-success text-white">Trener Personalny</span>
+                    }
+
+
+
+                    else
+
+                    {
+                        <span class="badge bg-info text-dark">Klient</span>
+                    }
+                </div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-sm-4 text-white-50">Status konta:</div>
+                <div class="col-sm-8 text-white fw-bold">
+                    @if (Model.IsApproved || Model.Rola != "Trener")
+
+                    {
+                        <span class="text-success"><i class="bi bi-check-circle-fill me-1"></i> Aktywne i
+                            zweryfikowane</span>
+                    }
+
+                    else
+
+                    {
+                        <span class="text-warning"><i class="bi bi-hourglass-split me-1"></i> Oczekuje na
+                            zatwierdzenie</span>
+                    }
+                </div>
+            </div>
+
+            @if (Model.Rola == "Klient")
+
+            {
+                <div class="row mb-3">
+                    <div class="col-sm-4 text-white-50">Twój Trener:</div>
+                    <div class="col-sm-8 text-white fw-bold">
+                        @if (!string.IsNullOrEmpty(Model.TrenerId) && ViewBag.TrenerName != null)
+
+                        {
+                            <span class="text-neon"><i class="bi bi-person-fill-check me-1"></i> @ViewBag.TrenerName</span>
+                        }
+
+                        else
+
+                        {
+                            <span class="text-muted fst-italic">Brak przypisanego trenera</span>
+                        }
+                    </div>
+                </div>
+            }
+
+            @if (Model.Rola != "Admin")
+
+            {
+                @* Flexbox (d-flex) zapewnia idealne wyrównanie przycisków w pionie i poziomie *@
+                <div class="mt-5 d-flex justify-content-center align-items-center gap-3">
+                    <button type="button" class="btn btn-neon" onclick="openChangePasswordModal()">
+                        <i class="bi bi-shield-lock me-2"></i> Zmień hasło
+                    </button>
+                    <a asp-controller="Home" asp-action="Index" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-1"></i> Wróć
+                    </a>
+                </div>
+            }
+
+            else
+
+            {
+                <div class="mt-5 text-center">
+                    <p class="text-white-50 small mb-3">
+                        <i class="bi bi-info-circle me-1"></i> Zarządzanie hasłem administratora odbywa się poza panelem
+                        profilu.
+                    </p>
+                    <a asp-controller="Home" asp-action="Index" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-1"></i> Wróć na stronę główną
+                    </a>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+</div>
+
+@section Scripts {
+    <script>
+        // Funkcja wyświetlająca podgląd wybranego zdjęcia przed wysłaniem na serwer.
+        function previewProfilePicture(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    Swal.fire({
+                        title: 'Podgląd zdjęcia',
+                        text: 'Czy chcesz ustawić to zdjęcie jako swój profilowy?',
+                        imageUrl: e.target.result,
+                        imageWidth: 200,
+                        imageHeight: 200,
+                        imageAlt: 'Podgląd',
+                        showCancelButton: true,
+                        confirmButtonText: 'Tak, zapisz!',
+                        cancelButtonText: 'Anuluj',
+                        background: '#1e1e1e',
+                        color: '#fff',
+                        confirmButtonColor: '#0df055',
+                        cancelButtonColor: '#d33'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            // Jeśli użytkownik zatwierdził, wysyłamy formularz.
+                            document.getElementById('profilePictureForm').submit();
+                        } else {
+                            // Jeśli anulował, czyścimy input, żeby mógł wybrać ten sam plik ponownie.
+                            input.value = '';
+                        }
+                    });
+                }
+                
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        // Funkcja otwierająca modal SweetAlert2 z formularzem zmiany hasła.
+        function openChangePasswordModal() {
+            Swal.fire({
+                title: 'Zmień hasło',
+                html: `
+                                <input type="password" id="currentPass" class="swal2-input" placeholder="Obecne hasło">
+                                <input type="password" id="newPass" class="swal2-input" placeholder="Nowe hasło">
+                                <input type="password" id="confirmPass" class="swal2-input" placeholder="Powtórz nowe hasło">
+                            `,
+                confirmButtonText: 'Zapisz zmiany',
+                showCancelButton: true,
+                cancelButtonText: 'Anuluj',
+                background: '#1e1e1e',
+                color: '#fff',
+                preConfirm: () => {
+                    // Pobieranie wartości z dynamicznie utworzonych pól modala.
+                    const currentPassword = Swal.getPopup().querySelector('#currentPass').value;
+                    const newPassword = Swal.getPopup().querySelector('#newPass').value;
+                    const confirmPassword = Swal.getPopup().querySelector('#confirmPass').value;
+
+                    // Walidacja front-end: nie wysyłamy pustych danych.
+                    if (!currentPassword || !newPassword || !confirmPassword) {
+                        Swal.showValidationMessage(`Proszę wypełnić wszystkie pola`);
+                    }
+                    return { currentPassword, newPassword, confirmPassword };
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Wykorzystanie Fetch API do asynchronicznego wysłania danych (AJAX).
+                    fetch('/Account/ChangePassword', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            // Kluczowe zabezpieczenie: dołączenie tokenu CSRF do nagłówka.
+                            'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                        },
+                        body: JSON.stringify(result.value) // Konwersja obiektu JS na format JSON.
+                    })
+                        .then(res => res.json())
+                        .then(data => {
+                            // Obsługa odpowiedzi z serwera i wyświetlenie wyniku użytkownikowi.
+                            if (data.success) {
+                                Swal.fire('Sukces!', data.message, 'success');
+                            } else {
+                                Swal.fire('Błąd!', data.message, 'error');
+                            }
+                        });
+                }
+            });
+        }
+    </script>
+}

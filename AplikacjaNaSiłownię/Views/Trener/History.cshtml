@@ -1,0 +1,114 @@
+@model IEnumerable<AplikacjaNaSiłownię.Models.CollaborationHistory>
+
+@{
+    ViewData["Title"] = "Historia Współpracy";
+}
+
+<div class="row mb-4">
+    <div class="col-12 text-center">
+        <h2 class="text-neon text-uppercase fw-bold">Historia Współpracy</h2>
+        <p class="text-white-50">Zakończone współprace z klientami</p>
+        <a asp-action="Index" class="btn btn-outline-secondary mt-2">
+            <i class="bi bi-arrow-left"></i> Wróć do panelu
+        </a>
+    </div>
+</div>
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        @if (!Model.Any())
+
+        {
+            <div class="card gym-card border-secondary border shadow p-5 text-center rounded-4">
+                <h4 class="text-white-50"><i class="bi bi-clock-history fs-1 d-block mb-3"></i>Brak historii</h4>
+                <p class="text-muted mb-0">Nie masz jeszcze żadnych zakończonych współprac w historii.</p>
+            </div>
+        }
+
+        else
+
+        {
+            <div class="table-responsive bg-dark rounded-3 shadow">
+                <table class="table table-dark table-hover mb-0 align-middle">
+                    <thead class="text-info border-bottom border-secondary">
+                        <tr>
+                            <th class="ps-4 py-3"><i class="bi bi-person me-2"></i> Klient</th>
+                            <th class="py-3"><i class="bi bi-calendar-x me-2"></i> Data zakończenia</th>
+                            <th class="py-3"><i class="bi bi-person-exclamation me-2"></i> Kto zakończył</th>
+                            <th class="py-3"><i class="bi bi-chat-left-text me-2"></i> Powód</th>
+                            <th class="pe-4 py-3 text-end"><i class="bi bi-gear me-2"></i> Działania</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var record in Model)
+
+
+
+                        {
+                            <tr class="border-secondary">
+                                <td class="ps-4 fw-bold">@record.ClientName</td>
+                                <td>@record.EndDate.ToString("dd.MM.yyyy HH:mm")</td>
+                                <td>
+                                    @if (record.EndedByRole == "Trener")
+
+                                    {
+                                        <span class="badge bg-danger">Ty</span>
+                                    }
+
+                                    else if (record.EndedByRole == "Administrator")
+
+                                    {
+                                        <span class="badge bg-secondary">Administrator</span>
+                                    }
+
+                                    else
+
+                                    {
+                                        <span class="badge bg-warning text-dark">Klient</span>
+                                    }
+                                </td>
+                                <td class="text-muted small">@record.Reason</td>
+                                <td class="pe-4 text-end">
+                                    <button type="button" class="btn btn-outline-danger btn-sm border-0 btn-delete-history"
+                                        data-id="@record.Id" title="Usuń z historii">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const deleteHistoryBtns = document.querySelectorAll('.btn-delete-history');
+            deleteHistoryBtns.forEach(btn => {
+                btn.addEventListener('click', function () {
+                    const recordId = this.getAttribute('data-id');
+                    gymConfirm("Czy na pewno chcesz usunąć ten wpis z historii?", function () {
+                        fetch('/Trener/DeleteHistoryRecord', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                            },
+                            body: JSON.stringify(recordId)
+                        })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success) {
+                                    gymAlert("Wpis został usunięty.", "success");
+                                    setTimeout(() => location.reload(), 1500);
+                                } else {
+                                    gymAlert("Wystąpił błąd podczas usuwania.", "error");
+                                }
+                            });
+                    });
+                });
+            });
+        });
+    </script>
+}

@@ -1,0 +1,389 @@
+:root {
+  --gym-bg: #121212;
+  --gym-card-bg: #1e1e1e;
+  --gym-neon: #39ff14;
+  --gym-neon-hover: #32e012;
+  --gym-text: #e0e0e0;
+}
+
+html {
+  font-size: 14px;
+}
+
+@media (min-width: 768px) {
+  html {
+    font-size: 16px;
+  }
+}
+
+html,
+body {
+  min-height: 100vh;
+  background-color: var(--gym-bg) !important;
+  color: var(--gym-text) !important;
+}
+
+.text-neon {
+  color: var(--gym-neon) !important;
+}
+
+.bg-neon {
+  background-color: var(--gym-neon) !important;
+}
+
+.border-neon {
+  border-color: var(--gym-neon) !important;
+}
+
+.btn-neon {
+  background-color: var(--gym-neon);
+  color: #000;
+  border: none;
+  font-weight: 600;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  box-shadow: 0 0 8px rgba(57, 255, 20, 0.3);
+}
+
+.btn-neon:hover {
+  background-color: var(--gym-neon-hover);
+  color: #000;
+  box-shadow: 0 0 20px rgba(57, 255, 20, 0.7);
+  transform: translateY(-3px) scale(1.05);
+}
+
+.btn-outline-neon {
+  background-color: transparent;
+  color: var(--gym-neon);
+  border: 1px solid var(--gym-neon);
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.btn-outline-neon:hover {
+  background-color: var(--gym-neon);
+  color: #000;
+  box-shadow: 0 0 20px rgba(57, 255, 20, 0.5);
+  transform: translateY(-3px) scale(1.05);
+}
+
+.gym-card {
+  background-color: var(--gym-card-bg) !important;
+  border: 1px solid #333 !important;
+}
+
+.gym-input {
+  background-color: #2a2a2a !important;
+  border: 1px solid #555 !important;
+  color: #fff !important;
+}
+
+.gym-input::placeholder {
+  color: #999;
+}
+
+.form-floating>.gym-input::placeholder {
+  color: transparent !important;
+}
+
+.form-floating>.gym-input:focus::placeholder {
+  color: #999 !important;
+}
+
+.gym-input:focus {
+  background-color: #333 !important;
+  border-color: var(--gym-neon) !important;
+  box-shadow: 0 0 5px rgba(57, 255, 20, 0.5) !important;
+  color: #fff !important;
+}
+
+.navbar.bg-dark {
+  background-color: #1a1a1a !important;
+  border-bottom: 1px solid #333;
+}
+
+.fc-theme-bootstrap5 {
+  --fc-page-bg-color: transparent;
+  --fc-neutral-bg-color: transparent;
+  --fc-border-color: rgba(255, 255, 255, 0.05);
+  /* Ekstremalnie delikatne linie siatki */
+  --fc-button-bg-color: #2a2a2a;
+  --fc-button-border-color: #444;
+  --fc-button-hover-bg-color: #333;
+  --fc-button-hover-border-color: var(--gym-neon);
+  --fc-button-active-bg-color: rgba(57, 255, 20, 0.1);
+  --fc-button-active-border-color: var(--gym-neon);
+  --fc-button-active-color: var(--gym-neon);
+  --fc-today-bg-color: rgba(13, 110, 253, 0.04);
+  /* Czysty, bardzo subtelny niebieski dla dzisiejszego dnia */
+}
+
+/* Całkowite usunięcie topornych ram kalendarza */
+.fc-scrollgrid,
+.fc-theme-bootstrap5 table {
+  border: none !important;
+}
+
+/* Ukrycie brzydkiej grubej belki all-day */
+.fc-timegrid-divider {
+  display: none !important;
+}
+
+/* Nowoczesne przyciski nawigacyjne kalendarza */
+.fc-button-primary {
+  border-radius: 8px !important;
+  font-weight: 500 !important;
+  transition: all 0.2s ease !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+  margin: 0 3px !important;
+  text-transform: capitalize;
+}
+
+.fc-button-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Tytuł kalendarza */
+.fc-toolbar-title {
+  font-weight: 700 !important;
+  font-size: 1.5rem !important;
+  letter-spacing: 0.5px;
+  color: #fff;
+}
+
+/* Subtelniejsze nagłówki kolumn */
+.fc-col-header-cell {
+  background-color: transparent !important;
+  padding: 15px 0 !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.fc .fc-col-header-cell-cushion,
+.fc .fc-daygrid-day-number {
+  color: #aaa;
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.2s;
+}
+
+/* Wyróżnienie dzisiejszego nagłówka */
+.fc-day-today .fc-col-header-cell-cushion {
+  color: var(--gym-neon) !important;
+  background-color: rgba(57, 255, 20, 0.1);
+  padding: 4px 12px;
+  border-radius: 12px;
+}
+
+/* Customowy Scrollbar dla kalendarza (tylko Webkit) */
+.fc-scroller::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.fc-scroller::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.fc-scroller::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 4px;
+}
+
+.fc-scroller::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Estetyka samych kafelków wydarzeń */
+.fc-event {
+  cursor: pointer !important;
+  border-radius: 6px !important;
+  border: none !important;
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  padding: 2px 5px;
+}
+
+/* Własne klasy wydarzeń dla kalendarza (Premium Glassmorphism) */
+.gym-event-planned {
+  background-color: rgba(13, 110, 253, 0.2) !important;
+  /* Lekkiej przeźroczystości niebieski */
+  border-left: 4px solid #0d6efd !important;
+  color: #8bb4f6 !important;
+  /* Jasnoniebieski tekst dla czytelności na ciemnym tle */
+}
+
+.gym-event-completed {
+  background-color: rgba(25, 135, 84, 0.2) !important;
+  /* Lekkiej przeźroczystości zielony */
+  border-left: 4px solid #198754 !important;
+  color: #83dca9 !important;
+  /* Jasnozielony tekst */
+}
+
+.fc-event-main {
+  font-weight: 500;
+  padding-left: 4px;
+}
+
+.fc-event:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5);
+  z-index: 10 !important;
+}
+
+/* Poprawa wyświetlania kropki w widoku miesiąca */
+.fc-daygrid-event-dot {
+  border-width: 4px !important;
+  margin-right: 6px !important;
+}
+
+/* Poprawa wyświetlania kropki w widoku miesiąca (native dot) */
+.fc-daygrid-event-dot {
+  border-width: 4px !important;
+  margin-right: 6px !important;
+}
+
+.gym-event-planned .fc-daygrid-event-dot {
+  border-color: #0d6efd !important;
+  box-shadow: 0 0 6px #0d6efd;
+}
+
+.gym-event-completed .fc-daygrid-event-dot {
+  border-color: #198754 !important;
+  box-shadow: 0 0 6px #198754;
+}
+
+/* Wstrzyknięcie kropek TYLKO dla widoków tygodnia i dnia */
+.fc-timegrid-event.gym-event-planned .fc-event-time::before {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #0d6efd;
+  /* Niebieska kropka */
+  margin-right: 5px;
+  box-shadow: 0 0 6px #0d6efd;
+}
+
+.fc-timegrid-event.gym-event-completed .fc-event-time::before {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #198754;
+  /* Zielona kropka */
+  margin-right: 5px;
+  box-shadow: 0 0 6px #198754;
+}
+
+/* --- Tła Stron (Backgrounds) Responsive --- */
+.bg-home {
+  background: linear-gradient(rgba(18, 18, 18, 0.6), rgba(18, 18, 18, 0.6)), url('/images/Tło_strony_głownej.jpg') no-repeat center center fixed !important;
+  background-size: cover !important;
+}
+
+.bg-history {
+  background: linear-gradient(rgba(18, 18, 18, 0.6), rgba(18, 18, 18, 0.6)), url('/images/HistoriaTrenigow.jpg') no-repeat center center fixed !important;
+  background-size: cover !important;
+}
+
+.bg-admin-panel {
+  background: linear-gradient(rgba(18, 18, 18, 0.6), rgba(18, 18, 18, 0.6)), url('/images/PanelAdminaBackground.jpg') no-repeat center center fixed !important;
+  background-size: cover !important;
+}
+
+.bg-calendar-view {
+  background: linear-gradient(rgba(18, 18, 18, 0.6), rgba(18, 18, 18, 0.6)), url('/images/PodglądKalendarza.jpg') no-repeat center center fixed !important;
+  background-size: cover !important;
+}
+
+/* Efekt szkła (Glassmorphism) dla kart nałożonych na zdjęcia w tle */
+body[class^="bg-"] .gym-card {
+  background-color: rgba(33, 37, 41, 0.85) !important;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.gym-nav-link {
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+  display: inline-block;
+}
+
+.gym-nav-link:hover {
+  transform: translateY(-2px);
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.4);
+}
+
+.gym-nav-link.text-neon:hover {
+  text-shadow: 0 0 15px var(--gym-neon);
+}
+
+.gym-nav-link.text-warning:hover {
+  text-shadow: 0 0 15px #ffc107;
+}
+
+.gym-profile-img {
+  border: 3px solid #0df055 !important;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.gym-profile-img:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 20px rgba(13, 240, 85, 0.5);
+}
+
+.bg-neon {
+  background-color: #0df055 !important;
+}
+
+/* === KROK 7: TUTAJ DODAJ PREMIUM STYLE DLA DZWONECZKA (TUTAJ ROZPOCZNIJ PRZEPISYWANIE STYLE) === */
+.notification-item {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  transition: all 0.3s ease;
+}
+.notification-item:hover {
+  background-color: rgba(255, 255, 255, 0.03) !important;
+}
+.notification-new-glow {
+  background-color: rgba(57, 255, 20, 0.05) !important;
+  animation: notificationGlow 2s infinite alternate;
+}
+@keyframes notificationGlow {
+  0% { box-shadow: inset 0 0 5px rgba(57, 255, 20, 0.1); }
+  100% { box-shadow: inset 0 0 15px rgba(57, 255, 20, 0.25); }
+}
+#notificationBellDropdown {
+  transition: transform 0.2s ease;
+}
+#notificationBellDropdown:hover {
+  transform: scale(1.1);
+}
+#notificationBellDropdown:hover .bi-bell-fill {
+  display: inline-block;
+  transform-origin: top center;
+  animation: bellRing 0.6s ease-in-out infinite;
+}
+#notificationBadge {
+  margin-top: 5px !important;
+  margin-left: -8px !important;
+}
+@keyframes bellRing {
+  0%, 100% { transform: rotate(0deg); }
+  20% { transform: rotate(15deg); }
+  40% { transform: rotate(-15deg); }
+  60% { transform: rotate(10deg); }
+  80% { transform: rotate(-10deg); }
+}
+.fs-7 { font-size: 0.8rem !important; }
+.text-gray-300 { color: #ccc !important; }
+.hover-neon-x {
+  opacity: 0.5;
+  transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+.hover-neon-x:hover {
+  opacity: 1 !important;
+  color: #ff3b30 !important;
+  text-shadow: 0 0 8px rgba(255, 59, 48, 0.8);
+  transform: scale(1.2);
+}

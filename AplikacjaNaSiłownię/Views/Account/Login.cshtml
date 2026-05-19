@@ -1,0 +1,58 @@
+@model AplikacjaNaSiłownię.Models.ViewModels.LoginViewModel
+
+@{
+    ViewData["Title"] = "Logowanie";
+}
+
+<div class="row justify-content-center mt-5">
+    <div class="col-md-6 col-lg-5">
+        <div class="card gym-card shadow-lg border-0 rounded-pilled">
+            <div class="card-body p-5">
+                <div class="text-center mb-4">
+                    <h2 class="text-white fw-bold">WITAJ</h2>
+                    <p class="text-muted">Zaloguj się, aby kontynuować treningi</p>
+                </div>
+                
+                @if (TempData["RegistrationSuccess"] != null)
+                {
+                    <div class="alert gym-card border-info text-white alert-dismissible fade show mb-4" role="alert">
+                        <i class="bi bi-info-circle text-info me-2"></i> @TempData["RegistrationSuccess"]
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                }
+
+                <form asp-action="Login" method="post">
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                    <div class="form-floating mb-4">
+                        <input asp-for="Email" class="form-control gym-input" placeholder="name@example.com" />
+                        <label asp-for="Email" class="text-muted">Email</label>
+                        <span asp-validation-for="Email" class="text-danger"></span>
+                    </div>
+
+                    <div class="form-floating mb-4 position-relative">
+                        <input asp-for="Password" class="form-control gym-input pe-5" placeholder="Hasło" id="loginPassword" />
+                        <label asp-for="Password" class="text-muted">Hasło</label>
+                        <button type="button" class="btn position-absolute top-50 end-0 translate-middle-y px-3 border-0 text-muted" onclick="togglePasswordVisibility('loginPassword', this)" tabindex="-1">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                        <span asp-validation-for="Password" class="text-danger d-block mt-1"></span>
+                    </div>
+
+                    <div class="d-grid gap-2 mb-4">
+                        <button type="submit" class="btn btn-neon btn-lg text-uppercase fw-bold">Wejdź</button>
+                    </div>
+                </form>
+
+                <div class="text-center mt-4">
+                    <span class="text-gray-400">Nie posiadasz konta? </span>
+                    <a asp-action="Register" class="text-neon text-decoration-none fw-bold">Załóż tutaj</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

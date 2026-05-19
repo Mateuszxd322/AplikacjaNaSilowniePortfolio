@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="AplikacjaNaSiłownię/AplikacjaNaSiłownię.csproj" />
+  <Project Path="AplikacjaNaSiłownię.Tests/AplikacjaNaSiłownię.Tests.csproj" />
+
+</Solution>

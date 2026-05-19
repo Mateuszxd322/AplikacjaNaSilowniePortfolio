@@ -1,0 +1,87 @@
+@model IEnumerable<AplikacjaNaSiłownię.Models.ApplicationUser>
+
+@{
+    ViewData["Title"] = "Panel Administratora";
+    ViewData["BodyClass"] = "bg-admin-panel";
+}
+
+<div class="row mb-4">
+    <div class="col-12 text-center">
+        <h2 class="text-neon text-uppercase fw-bold">Zarządzanie Użytkownikami</h2>
+    </div>
+</div>
+
+<div class="card gym-card p-4">
+    <div class="table-responsive">
+        <table class="table table-dark table-hover align-middle">
+            <thead>
+                <tr>
+                    <th>Email</th>
+                    <th>Imię</th>
+                    <th>Nazwisko</th>
+                    <th>Obecna Rola</th>
+                    <th>Działania</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var user in Model)
+                {
+                    <tr>
+                        <td>@user.Email</td>
+                        <td>@user.Imie</td>
+                        <td>@user.Nazwisko</td>
+                        <td><span class="badge bg-secondary text-neon">@user.Rola</span></td>
+                        <td>
+                            @if (user.Rola != "Admin")
+                            {
+                                <form asp-action="DeleteUser" method="post" class="delete-user-form">
+                                    <input type="hidden" name="userId" value="@user.Id" />
+                                    <button type="submit" class="btn btn-sm btn-outline-danger px-4">Usuń</button>
+                                </form>
+                            }
+                            else
+                            {
+                                <span class="text-muted small">Brak akcji</span>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            $('.delete-user-form').on('submit', function (e) {
+                e.preventDefault();
+                const form = this;
+                const userId = $(form).find('input[name="userId"]').val();
+
+                // Najpierw sprawdzamy zależności na serwerze
+                fetch(`/Admin/CheckUserDependencies?userId=${userId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        let warningMsg = 'Uwaga! Jesteś pewien, że chcesz usunąć konto tego użytkownika? Ta operacja jest bezpowrotna.';
+                        
+                        if (data.hasDependencies) {
+                            warningMsg = data.message;
+                        }
+
+                        // Wykorzystujemy istniejącą funkcję gymConfirm z _Layout.cshtml
+                        gymConfirm(warningMsg, () => {
+                            form.submit();
+                        });
+                    })
+                    .catch(error => {
+                        console.error('Error checking dependencies:', error);
+                        // W razie błędu sieci, pokazujemy standardowe ostrzeżenie
+                        gymConfirm('Uwaga! Jesteś pewien, że chcesz usunąć to konto? Ta operacja jest bezpowrotna.', () => {
+                            form.submit();
+                        });
+                    });
+            });
+        });
+    </script>
+}

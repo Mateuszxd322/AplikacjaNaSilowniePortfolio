@@ -1,0 +1,93 @@
+@model IEnumerable<AplikacjaNaSiłownię.Models.ApplicationUser>
+
+@{
+    ViewData["Title"] = "Panel Trenera";
+}
+
+<div class="row mb-4">
+    <div class="col-12 text-center">
+        <h2 class="text-neon text-uppercase fw-bold">Moi Klienci</h2>
+        <p class="text-white-50">Zarządzaj podopiecznymi</p>
+        <a asp-action="AvailableClients" class="btn btn-outline-neon mt-2">
+            <i class="bi bi-person-plus"></i> Znajdź nowych klientów
+        </a>
+        <a asp-action="History" class="btn btn-outline-info mt-2 ms-2">
+            <i class="bi bi-clock-history"></i> Historia współpracy
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    @if(!Model.Any())
+    {
+        <div class="col-12 border border-secondary p-5 text-center gym-card rounded-4">
+            <h4 class="text-white-50">Nie masz jeszcze przypisanych klientów.</h4>
+        </div>
+    }
+    else
+    {
+        @foreach(var client in Model)
+        {
+            <div class="col-md-4 mb-4">
+                <div class="card gym-card h-100 border-0 shadow">
+                    <div class="card-body text-center">
+                        <div class="mb-3">
+                            <span class="display-1 text-neon"><i class="bi bi-person-circle"></i></span>
+                        </div>
+                        <h4 class="text-white">@client.Imie @client.Nazwisko</h4>
+                        <p class="text-muted mb-4">@client.Email</p>
+                        
+                        <div class="d-grid gap-2">
+                            <a asp-action="ClientCalendar" asp-route-id="@client.Id" class="btn btn-neon">
+                                <i class="bi bi-calendar-event"></i> Podgląd kalendarza
+                            </a>
+                            <button type="button" class="btn btn-outline-danger btn-remove-client" data-id="@client.Id">
+                                <i class="bi bi-person-dash"></i> Zakończ współpracę
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const removeButtons = document.querySelectorAll('.btn-remove-client');
+            
+            removeButtons.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const clientId = this.getAttribute('data-id');
+                    
+                    gymPrompt("Zanim zakończysz współpracę z tym klientem, podaj powód. Zostanie on zapisany w historii.", function(reason) {
+                        const payload = { clientId: clientId, reason: reason };
+                        
+                        fetch('/Trener/RemoveClient', {
+                            method: 'POST',
+                            headers: { 
+                                'Content-Type': 'application/json',
+                                'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                            },
+                            body: JSON.stringify(payload)
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                gymAlert("Klient został odłączony.", "info");
+                                setTimeout(() => location.reload(), 1500);
+                            } else {
+                                gymAlert(data.message || "Wystąpił błąd podczas odłączania klienta.", "error");
+                            }
+                        })
+                        .catch(err => {
+                            console.error(err);
+                            gymAlert("Wystąpił błąd połączenia z serwerem.", "error");
+                        });
+                    });
+                });
+            });
+        });
+    </script>
+}

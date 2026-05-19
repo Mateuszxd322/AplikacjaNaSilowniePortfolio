@@ -1,0 +1,67 @@
+@model IEnumerable<AplikacjaNaSiłownię.Models.ApplicationUser>
+
+@{
+    ViewData["Title"] = "Prośby o rejestrację";
+    ViewData["BodyClass"] = "bg-admin-panel";
+}
+
+<div class="row mb-4">
+    <div class="col-12 text-center">
+        <h2 class="text-neon text-uppercase fw-bold">Oczekujące Podania Trenerów</h2>
+        <p class="text-white-50">Lista kont oczekujących na weryfikację i dostęp do platformy.</p>
+    </div>
+</div>
+
+<div class="card gym-card p-4">
+    <div class="table-responsive">
+        <table class="table table-dark table-hover align-middle border-secondary">
+            <thead>
+                <tr>
+                    <th class="text-neon">Imię i Nazwisko</th>
+                    <th class="text-neon">Email</th>
+                    <th class="text-neon">Rola</th>
+                    <th class="text-neon text-end">Akcje</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var user in Model)
+                    {
+                        <tr>
+                            <td class="fw-bold">@user.Imie @user.Nazwisko</td>
+                            <td>@user.Email</td>
+                            <td><span class="badge bg-warning text-dark">@user.Rola (Oczekujący)</span></td>
+                            <td class="text-end">
+                                <div class="d-flex justify-content-end gap-2">
+                                    <form asp-action="ApproveUser" method="post" onsubmit="event.preventDefault(); gymConfirm('Czy na pewno chcesz zatwierdzić tego trenera? Otrzyma on pełny dostęp do aplikacji.', () => this.submit());">
+                                        <input type="hidden" name="userId" value="@user.Id" />
+                                        <button type="submit" class="btn btn-sm btn-neon px-3">
+                                            <i class="bi bi-check-circle me-1"></i> Zatwierdź
+                                        </button>
+                                    </form>
+
+                                    <form asp-action="RejectUser" method="post" onsubmit="event.preventDefault(); gymConfirm('Czy na pewno chcesz odrzucić to podanie? Konto zostanie trwale usunięte.', () => this.submit());">
+                                        <input type="hidden" name="userId" value="@user.Id" />
+                                        <button type="submit" class="btn btn-sm btn-outline-danger px-3">
+                                            <i class="bi bi-x-circle me-1"></i> Odrzuć
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="4" class="text-center py-5 text-white-50">
+                            <i class="bi bi-inbox fs-1 d-block mb-3"></i>
+                            Brak nowych próśb o rejestrację.
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
