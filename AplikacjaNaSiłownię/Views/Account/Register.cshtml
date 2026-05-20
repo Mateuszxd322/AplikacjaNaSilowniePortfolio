@@ -2,6 +2,8 @@
 
 @{
     ViewData["Title"] = "Rejestracja";
+
+    ViewData["BodyClass"] = "bg-app-general";
 }
 
 <div class="row justify-content-center mt-5">
@@ -31,18 +33,24 @@
                     </div>
 
                     <div class="form-floating mb-3 position-relative">
-                        <input asp-for="Password" class="form-control gym-input pe-5" placeholder="Hasło" id="registerPassword" />
+                        <input asp-for="Password" class="form-control gym-input pe-5" placeholder="Hasło"
+                            id="registerPassword" />
                         <label asp-for="Password" class="text-muted">Hasło</label>
-                        <button type="button" class="btn position-absolute top-50 end-0 translate-middle-y px-3 border-0 text-muted" onclick="togglePasswordVisibility('registerPassword', this)" tabindex="-1">
+                        <button type="button"
+                            class="btn position-absolute top-50 end-0 translate-middle-y px-3 border-0 text-muted"
+                            onclick="togglePasswordVisibility('registerPassword', this)" tabindex="-1">
                             <i class="bi bi-eye"></i>
                         </button>
                         <span asp-validation-for="Password" class="text-danger d-block mt-1"></span>
                     </div>
 
                     <div class="form-floating mb-3 position-relative">
-                        <input asp-for="ConfirmPassword" class="form-control gym-input pe-5" placeholder="Potwierdź hasło" id="registerConfirmPassword" />
+                        <input asp-for="ConfirmPassword" class="form-control gym-input pe-5"
+                            placeholder="Potwierdź hasło" id="registerConfirmPassword" />
                         <label asp-for="ConfirmPassword" class="text-muted">Potwierdź hasło</label>
-                        <button type="button" class="btn position-absolute top-50 end-0 translate-middle-y px-3 border-0 text-muted" onclick="togglePasswordVisibility('registerConfirmPassword', this)" tabindex="-1">
+                        <button type="button"
+                            class="btn position-absolute top-50 end-0 translate-middle-y px-3 border-0 text-muted"
+                            onclick="togglePasswordVisibility('registerConfirmPassword', this)" tabindex="-1">
                             <i class="bi bi-eye"></i>
                         </button>
                         <span asp-validation-for="ConfirmPassword" class="text-danger d-block mt-1"></span>
@@ -58,10 +66,11 @@
                     </div>
 
                     <div class="d-grid gap-2">
-                        <button type="submit" class="btn btn-neon btn-lg text-uppercase fw-bold">Zarejestruj się</button>
+                        <button type="submit" class="btn btn-neon btn-lg text-uppercase fw-bold">Zarejestruj
+                            się</button>
                     </div>
                 </form>
-                
+
                 <div class="text-center mt-4">
                     <span class="text-gray-400">Masz już konto? </span>
                     <a asp-action="Login" class="text-neon text-decoration-none">Zaloguj się</a>
@@ -72,5 +81,7 @@
 </div>
 
 @section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
 }

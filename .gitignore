@@ -51,3 +51,7 @@ Thumbs.db
 **/wwwroot/uploads/*
 !**/wwwroot/uploads/.gitkeep
 
+## Image assets (backgrounds and large photos)
+**/wwwroot/images/*.jpg
+
+

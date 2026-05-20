@@ -43,20 +43,23 @@ builder.Services.AddScoped<AplikacjaNaSiłownię.Services.IWorkoutService, Aplik
 // Konfiguracja Antiforgery dla zapytań fetch (CSRF)
 builder.Services.AddAntiforgery(options => options.HeaderName = "RequestVerificationToken");
 
-// Konfiguracja usługi Rate Limiting (Ograniczanie liczby zapytań do serwera).
-// Chroni to aplikację przed atakami typu DoS oraz Brute Force, blokując nadmiarowe żądania z jednego źródła.
+// Konfiguracja Rate Limitingu z partycjonowaniem po adresie IP klienta.
+// Zapobiega to atakom Denial of Service (DoS) na poziomie globalnym – ograniczenie liczby żądań
+// dotyczy pojedynczego IP, więc próba brute-force lub przeciążenia serwera z jednego źródła nie zablokuje dostępu innym użytkownikom.
 builder.Services.AddRateLimiter(options =>
     {
-        // Definiujemy politykę "LoginPolicy" typu Fixed Window (stałe okno czasowe).
-        options.AddFixedWindowLimiter("LoginPolicy", opt =>
-        {
-            opt.PermitLimit = 5; // Użytkownik może wykonać maksymalnie 5 prób...
-            opt.Window = TimeSpan.FromSeconds(10); // ...w ciągu każdych 10 sekund.
-            opt.QueueLimit = 0; // Nie wstawiamy nadmiarowych zapytań do kolejki (odrzucamy je natychmiast).
-            opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-        });
+        options.AddPolicy("LoginPolicy", httpContext =>
+            RateLimitPartition.GetFixedWindowLimiter(
+                partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "global",
+                factory: partition => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = 5,                      // Użytkownik z danego IP może wykonać maksymalnie 5 prób...
+                    Window = TimeSpan.FromSeconds(10),     // ...w ciągu każdych 10 sekund.
+                    QueueLimit = 0,                        // Brak kolejkowania - nadmiarowe żądania są natychmiast odrzucane.
+                    QueueProcessingOrder = QueueProcessingOrder.OldestFirst
+                }));
 
-        // Ustawiamy standardowy kod odpowiedzi HTTP 429 (Too Many Requests) dla odrzuconych żądań.
+        // Ustawiamy kod odpowiedzi HTTP 429 (Too Many Requests) dla odrzuconych żądań.
         options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
     }
 );

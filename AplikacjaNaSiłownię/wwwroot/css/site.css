@@ -297,6 +297,15 @@ body {
   background: linear-gradient(rgba(18, 18, 18, 0.6), rgba(18, 18, 18, 0.6)), url('/images/PodglądKalendarza.jpg') no-repeat center center fixed !important;
   background-size: cover !important;
 }
+.bg-app-general {
+  background: linear-gradient(rgba(18, 18, 18, 0.7), rgba(18, 18, 18, 0.7)), url('/images/TłoDoAplikacji.jpg') no-repeat center center fixed !important;
+  background-size: cover !important;
+}
+
+.bg-dashboard {
+  background: linear-gradient(rgba(18, 18, 18, 0.7), rgba(18, 18, 18, 0.7)), url('/images/ZdjecieZsilowniNaTło.jpg') no-repeat center center fixed !important;
+  background-size: cover !important;
+}
 
 /* Efekt szkła (Glassmorphism) dla kart nałożonych na zdjęcia w tle */
 body[class^="bg-"] .gym-card {
@@ -342,45 +351,82 @@ body[class^="bg-"] .gym-card {
   border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
   transition: all 0.3s ease;
 }
+
 .notification-item:hover {
   background-color: rgba(255, 255, 255, 0.03) !important;
 }
+
 .notification-new-glow {
   background-color: rgba(57, 255, 20, 0.05) !important;
   animation: notificationGlow 2s infinite alternate;
 }
+
 @keyframes notificationGlow {
-  0% { box-shadow: inset 0 0 5px rgba(57, 255, 20, 0.1); }
-  100% { box-shadow: inset 0 0 15px rgba(57, 255, 20, 0.25); }
+  0% {
+    box-shadow: inset 0 0 5px rgba(57, 255, 20, 0.1);
+  }
+
+  100% {
+    box-shadow: inset 0 0 15px rgba(57, 255, 20, 0.25);
+  }
 }
+
 #notificationBellDropdown {
   transition: transform 0.2s ease;
 }
+
 #notificationBellDropdown:hover {
   transform: scale(1.1);
 }
+
 #notificationBellDropdown:hover .bi-bell-fill {
   display: inline-block;
   transform-origin: top center;
   animation: bellRing 0.6s ease-in-out infinite;
 }
+
 #notificationBadge {
   margin-top: 5px !important;
   margin-left: -8px !important;
 }
+
 @keyframes bellRing {
-  0%, 100% { transform: rotate(0deg); }
-  20% { transform: rotate(15deg); }
-  40% { transform: rotate(-15deg); }
-  60% { transform: rotate(10deg); }
-  80% { transform: rotate(-10deg); }
+
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+
+  20% {
+    transform: rotate(15deg);
+  }
+
+  40% {
+    transform: rotate(-15deg);
+  }
+
+  60% {
+    transform: rotate(10deg);
+  }
+
+  80% {
+    transform: rotate(-10deg);
+  }
 }
-.fs-7 { font-size: 0.8rem !important; }
-.text-gray-300 { color: #ccc !important; }
+
+.fs-7 {
+  font-size: 0.8rem !important;
+}
+
+.text-gray-300 {
+  color: #ccc !important;
+}
+
 .hover-neon-x {
   opacity: 0.5;
   transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
+
 .hover-neon-x:hover {
   opacity: 1 !important;
   color: #ff3b30 !important;

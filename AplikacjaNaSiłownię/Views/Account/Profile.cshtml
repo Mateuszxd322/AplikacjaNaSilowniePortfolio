@@ -3,9 +3,15 @@
 @{
     ViewData["Title"] = "Moje Konto";
 
+
+
     // Tło zależy od roli użytkownika
 
-    ViewData["BodyClass"] = Model.Rola == "Admin" ? "bg-admin-panel" : (Model.Rola == "Trener" ? "" : "bg-calendar-view");
+
+
+    ViewData["BodyClass"] = Model.Rola == "Admin" ? "bg-admin-panel" : (Model.Rola == "Trener" ? "bg-app-general" :
+
+    "bg-calendar-view");
 }
 
 <div class="row mb-4">
@@ -24,8 +30,6 @@
                     <div class="profile-picture-container position-relative d-inline-block mb-3">
                         @if (!string.IsNullOrEmpty(Model.ProfilePicturesPath))
 
-
-
                         {
                             <img src="~/uploads/profiles/@Model.ProfilePicturesPath"
                                 class="rounded-circle img-thumbnail shadow gym-profile-img" alt="Zdjęcie profilowe"
@@ -33,9 +37,11 @@
                                 onclick="document.getElementById('profilePictureInput').click();" />
                         }
 
-
-
                         else
+
+
+
+
 
 
 
@@ -47,7 +53,8 @@
                             </div>
                         }
                         <div class="position-absolute bottom-0 end-0 bg-neon text-dark rounded-circle p-2 shadow-sm"
-                            style="cursor: pointer; width: 35px; height: 35px; display: flex; align-items: center; justify-content: center;" onclick="document.getElementById('profilePictureInput').click();">
+                            style="cursor: pointer; width: 35px; height: 35px; display: flex; align-items: center; justify-content: center;"
+                            onclick="document.getElementById('profilePictureInput').click();">
                             <i class="bi bi-camera-fill"></i>
                         </div>
                     </div>
@@ -59,8 +66,7 @@
                     <form asp-action="UploadProfilePicture" method="post" enctype="multipart/form-data"
                         id="profilePictureForm" class="d-none">
                         <input type="file" name="profilePicture" id="profilePictureInput"
-                            onchange="previewProfilePicture(this)"
-                            accept=".jpg,.jpeg,.png" />
+                            onchange="previewProfilePicture(this)" accept=".jpg,.jpeg,.png" />
                     </form>
                 </div>
             </div>
@@ -74,9 +80,13 @@
                 <div class="col-sm-8 text-white fw-bold">
                     @if (Model.Rola == "Admin")
 
+
+
                     {
                         <span class="badge bg-danger text-white">Administrator</span>
                     }
+
+
 
                     else if (Model.Rola == "Trener")
 
@@ -90,6 +100,8 @@
 
                     else
 
+
+
                     {
                         <span class="badge bg-info text-dark">Klient</span>
                     }
@@ -101,12 +113,16 @@
                 <div class="col-sm-8 text-white fw-bold">
                     @if (Model.IsApproved || Model.Rola != "Trener")
 
+
+
                     {
                         <span class="text-success"><i class="bi bi-check-circle-fill me-1"></i> Aktywne i
                             zweryfikowane</span>
                     }
 
                     else
+
+
 
                     {
                         <span class="text-warning"><i class="bi bi-hourglass-split me-1"></i> Oczekuje na
@@ -123,11 +139,17 @@
                     <div class="col-sm-8 text-white fw-bold">
                         @if (!string.IsNullOrEmpty(Model.TrenerId) && ViewBag.TrenerName != null)
 
+
+
                         {
                             <span class="text-neon"><i class="bi bi-person-fill-check me-1"></i> @ViewBag.TrenerName</span>
                         }
 
+
+
                         else
+
+
 
                         {
                             <span class="text-muted fst-italic">Brak przypisanego trenera</span>
@@ -174,8 +196,8 @@
         function previewProfilePicture(input) {
             if (input.files && input.files[0]) {
                 const reader = new FileReader();
-                
-                reader.onload = function(e) {
+
+                reader.onload = function (e) {
                     Swal.fire({
                         title: 'Podgląd zdjęcia',
                         text: 'Czy chcesz ustawić to zdjęcie jako swój profilowy?',
@@ -200,7 +222,7 @@
                         }
                     });
                 }
-                
+
                 reader.readAsDataURL(input.files[0]);
             }
         }
@@ -228,34 +250,34 @@
             Swal.fire({
                 title: 'Zmień hasło',
                 html: `
-                    <div class="mb-3 text-start mx-auto" style="max-width: 90%;">
-                        <label for="currentPass" class="form-label text-white-50 small mb-1">Obecne hasło</label>
-                        <div class="input-group">
-                            <input type="password" id="currentPass" class="form-control bg-dark border-secondary text-white" placeholder="Obecne hasło" style="border-right: none; box-shadow: none;">
-                            <button type="button" class="btn btn-outline-secondary border-secondary bg-dark text-white-50" onclick="togglePasswordVisibility('currentPass', this)" style="border-left: none; box-shadow: none;">
-                                <i class="bi bi-eye-slash"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="mb-3 text-start mx-auto" style="max-width: 90%;">
-                        <label for="newPass" class="form-label text-white-50 small mb-1">Nowe hasło</label>
-                        <div class="input-group">
-                            <input type="password" id="newPass" class="form-control bg-dark border-secondary text-white" placeholder="Nowe hasło" style="border-right: none; box-shadow: none;">
-                            <button type="button" class="btn btn-outline-secondary border-secondary bg-dark text-white-50" onclick="togglePasswordVisibility('newPass', this)" style="border-left: none; box-shadow: none;">
-                                <i class="bi bi-eye-slash"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="mb-3 text-start mx-auto" style="max-width: 90%;">
-                        <label for="confirmPass" class="form-label text-white-50 small mb-1">Powtórz nowe hasło</label>
-                        <div class="input-group">
-                            <input type="password" id="confirmPass" class="form-control bg-dark border-secondary text-white" placeholder="Powtórz nowe hasło" style="border-right: none; box-shadow: none;">
-                            <button type="button" class="btn btn-outline-secondary border-secondary bg-dark text-white-50" onclick="togglePasswordVisibility('confirmPass', this)" style="border-left: none; box-shadow: none;">
-                                <i class="bi bi-eye-slash"></i>
-                            </button>
-                        </div>
-                    </div>
-                `,
+                                <div class="mb-3 text-start mx-auto" style="max-width: 90%;">
+                                    <label for="currentPass" class="form-label text-white-50 small mb-1">Obecne hasło</label>
+                                    <div class="input-group">
+                                        <input type="password" id="currentPass" class="form-control bg-dark border-secondary text-white" placeholder="Obecne hasło" style="border-right: none; box-shadow: none;">
+                                        <button type="button" class="btn btn-outline-secondary border-secondary bg-dark text-white-50" onclick="togglePasswordVisibility('currentPass', this)" style="border-left: none; box-shadow: none;">
+                                            <i class="bi bi-eye-slash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="mb-3 text-start mx-auto" style="max-width: 90%;">
+                                    <label for="newPass" class="form-label text-white-50 small mb-1">Nowe hasło</label>
+                                    <div class="input-group">
+                                        <input type="password" id="newPass" class="form-control bg-dark border-secondary text-white" placeholder="Nowe hasło" style="border-right: none; box-shadow: none;">
+                                        <button type="button" class="btn btn-outline-secondary border-secondary bg-dark text-white-50" onclick="togglePasswordVisibility('newPass', this)" style="border-left: none; box-shadow: none;">
+                                            <i class="bi bi-eye-slash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="mb-3 text-start mx-auto" style="max-width: 90%;">
+                                    <label for="confirmPass" class="form-label text-white-50 small mb-1">Powtórz nowe hasło</label>
+                                    <div class="input-group">
+                                        <input type="password" id="confirmPass" class="form-control bg-dark border-secondary text-white" placeholder="Powtórz nowe hasło" style="border-right: none; box-shadow: none;">
+                                        <button type="button" class="btn btn-outline-secondary border-secondary bg-dark text-white-50" onclick="togglePasswordVisibility('confirmPass', this)" style="border-left: none; box-shadow: none;">
+                                            <i class="bi bi-eye-slash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            `,
                 confirmButtonText: 'Zapisz zmiany',
                 showCancelButton: true,
                 cancelButtonText: 'Anuluj',

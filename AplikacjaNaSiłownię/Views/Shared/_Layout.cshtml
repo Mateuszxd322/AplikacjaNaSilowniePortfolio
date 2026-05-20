@@ -3,6 +3,7 @@
 @inject UserManager<ApplicationUser> UserManager
 <!DOCTYPE html>
 <html lang="pl" data-bs-theme="dark">
+
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -13,15 +14,18 @@
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/AplikacjaNaSiłownię.styles.css" asp-append-version="true" />
 </head>
+
 <body class="@ViewData["BodyClass"]">
     <header>
         <nav class="navbar navbar-expand-sm navbar-dark bg-dark mb-3">
             <div class="container-fluid">
-                <a class="navbar-brand text-neon fw-bold d-flex align-items-center" asp-area="" asp-controller="Home" asp-action="Index">
+                <a class="navbar-brand text-neon fw-bold d-flex align-items-center" asp-area="" asp-controller="Home"
+                    asp-action="Index">
                     <i class="bi bi-activity me-2"></i> GYM APP
                 </a>
-                <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
-                        aria-expanded="false" aria-label="Toggle navigation">
+                <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse"
+                    data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent" aria-expanded="false"
+                    aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
                 </button>
                 <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
@@ -31,28 +35,33 @@
                             @if (User.IsInRole("Admin"))
                             {
                                 <li class="nav-item">
-                                    <a class="nav-link text-neon gym-nav-link" asp-area="" asp-controller="Admin" asp-action="Index">
+                                    <a class="nav-link text-neon gym-nav-link" asp-area="" asp-controller="Admin"
+                                        asp-action="Index">
                                         <i class="bi bi-shield-lock-fill"></i> Panel Admina
                                     </a>
                                 </li>
                                 <li class="nav-item ms-md-2 test-neon-border">
-                                    <a class="nav-link text-neon gym-nav-link" asp-area="" asp-controller="Admin" asp-action="Calendar">
+                                    <a class="nav-link text-neon gym-nav-link" asp-area="" asp-controller="Admin"
+                                        asp-action="Calendar">
                                         <i class="bi bi-calendar3"></i> Podgląd Kalendarzy
                                     </a>
                                 </li>
                                 <li class="nav-item ms-md-2">
-                                    <a class="nav-link text-neon gym-nav-link" asp-area="" asp-controller="Admin" asp-action="Collaborations">
+                                    <a class="nav-link text-neon gym-nav-link" asp-area="" asp-controller="Admin"
+                                        asp-action="Collaborations">
                                         <i class="bi bi-people-fill"></i> Podgląd współprac trenerskich z klientami
                                     </a>
                                 </li>
                                 <li class="nav-item ms-md-2">
-                                    <a class="nav-link text-warning gym-nav-link" asp-area="" asp-controller="Admin" asp-action="Requests">
+                                    <a class="nav-link text-warning gym-nav-link" asp-area="" asp-controller="Admin"
+                                        asp-action="Requests">
                                         <i class="bi bi-person-plus-fill"></i> Prośby o rejestrację
                                     </a>
                                 </li>
                                 <!-- === TUTAJ WPISZ LINK DO DASHBOARDU ADMINA (START) === -->
                                 <li class="nav-item ms-md-2">
-                                    <a class="nav-link text-info gym-nav-link" asp-area="" asp-controller="Dashboard" asp-action="Index">
+                                    <a class="nav-link text-info gym-nav-link" asp-area="" asp-controller="Dashboard"
+                                        asp-action="Index">
                                         <i class="bi bi-pie-chart-fill"></i> Statystyki Klientów
                                     </a>
                                 </li>
@@ -61,13 +70,15 @@
                             @if (User.IsInRole("Trener"))
                             {
                                 <li class="nav-item">
-                                    <a class="nav-link gym-nav-link text-neon" asp-area="" asp-controller="Trener" asp-action="Index">
+                                    <a class="nav-link gym-nav-link text-neon" asp-area="" asp-controller="Trener"
+                                        asp-action="Index">
                                         <i class="bi bi-people-fill"></i> Moi Klienci
                                     </a>
                                 </li>
                                 <!-- === TUTAJ WPISZ LINK DO DASHBOARDU TRENERA (START) === -->
                                 <li class="nav-item ms-md-2">
-                                    <a class="nav-link text-info gym-nav-link" asp-area="" asp-controller="Dashboard" asp-action="Index">
+                                    <a class="nav-link text-info gym-nav-link" asp-area="" asp-controller="Dashboard"
+                                        asp-action="Index">
                                         <i class="bi bi-pie-chart-fill"></i> Panel Statystyk
                                     </a>
                                 </li>
@@ -76,31 +87,36 @@
                             @if (User.IsInRole("Klient"))
                             {
                                 <li class="nav-item">
-                                    <a class="nav-link text-neon gym-nav-link" asp-area="" asp-controller="Klient" asp-action="Index">
+                                    <a class="nav-link text-neon gym-nav-link" asp-area="" asp-controller="Klient"
+                                        asp-action="Index">
                                         <i class="bi bi-calendar-event-fill"></i> Mój Kalendarz
                                     </a>
                                 </li>
                                 <!-- === TUTAJ WPISZ LINK DO DASHBOARDU KLIENTA (START) === -->
                                 <li class="nav-item ms-md-2">
-                                    <a class="nav-link text-info gym-nav-link" asp-area="" asp-controller="Dashboard" asp-action="Index">
+                                    <a class="nav-link text-info gym-nav-link" asp-area="" asp-controller="Dashboard"
+                                        asp-action="Index">
                                         <i class="bi bi-pie-chart-fill"></i> Moje Statystyki
                                     </a>
                                 </li>
                                 <!-- === TUTAJ WPISZ LINK DO DASHBOARDU KLIENTA (KONIEC) === -->
                                 <li class="nav-item ms-md-2">
-                                    <a class="nav-link text-warning gym-nav-link" asp-area="" asp-controller="Klient" asp-action="Requests">
+                                    <a class="nav-link text-warning gym-nav-link" asp-area="" asp-controller="Klient"
+                                        asp-action="Requests">
                                         <i class="bi bi-envelope"></i> Moje Zaproszenia
                                     </a>
                                 </li>
                                 <li class="nav-item ms-md-2">
-                                    <a class="nav-link text-info gym-nav-link" asp-area="" asp-controller="Klient" asp-action="MyTrainer">
+                                    <a class="nav-link text-info gym-nav-link" asp-area="" asp-controller="Klient"
+                                        asp-action="MyTrainer">
                                         <i class="bi bi-person-badge"></i> Mój Trener
                                     </a>
                                 </li>
                             }
                             <li class="nav-item ms-md-2">
-                                <a class="nav-link text-warning gym-nav-link" asp-area="" asp-controller="Historia" asp-action="Index">
-                                    <i class="bi bi-clock-history"></i> 
+                                <a class="nav-link text-warning gym-nav-link" asp-area="" asp-controller="Historia"
+                                    asp-action="Index">
+                                    <i class="bi bi-clock-history"></i>
                                     @if (User.IsInRole("Admin") || User.IsInRole("Trener"))
                                     {
                                         <text>Historia treningów klientów</text>
@@ -120,20 +136,30 @@
 
 
                             <li class="nav-item dropdown me-3 d-flex align-items-center position-relative">
-                                <a class="nav-link text-neon position-relative p-2" href="#" id="notificationBellDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false" data-bs-auto-close="outside">
+                                <a class="nav-link text-neon position-relative p-2" href="#" id="notificationBellDropdown"
+                                    role="button" data-bs-toggle="dropdown" aria-expanded="false"
+                                    data-bs-auto-close="outside">
                                     <i class="bi bi-bell-fill fs-4"></i>
-                                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-dark d-none" id="notificationBadge">
+                                    <span
+                                        class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-dark d-none"
+                                        id="notificationBadge">
                                         0
                                     </span>
                                 </a>
-                                <div class="dropdown-menu dropdown-menu-end gym-card border-secondary p-0 shadow-lg" aria-labelledby="notificationBellDropdown" style="width: 340px; max-height: 480px; overflow: hidden;">
-                                    <div class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom border-secondary bg-dark">
-                                        <span class="fw-bold text-white"><i class="bi bi-bell me-1 text-neon"></i> Powiadomienia</span>
-                                        <button type="button" class="btn btn-sm btn-outline-neon py-0 px-2 fs-7" id="btnMarkAllRead" onclick="markAllNotificationsAsRead()">
+                                <div class="dropdown-menu dropdown-menu-end gym-card border-secondary p-0 shadow-lg"
+                                    aria-labelledby="notificationBellDropdown"
+                                    style="width: 340px; max-height: 480px; overflow: hidden;">
+                                    <div
+                                        class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom border-secondary bg-dark">
+                                        <span class="fw-bold text-white"><i class="bi bi-bell me-1 text-neon"></i>
+                                            Powiadomienia</span>
+                                        <button type="button" class="btn btn-sm btn-outline-neon py-0 px-2 fs-7"
+                                            id="btnMarkAllRead" onclick="markAllNotificationsAsRead()">
                                             Odczytaj wszystkie
                                         </button>
                                     </div>
-                                    <div class="overflow-y-auto px-1 py-1" id="notificationListContainer" style="max-height: 380px;">
+                                    <div class="overflow-y-auto px-1 py-1" id="notificationListContainer"
+                                        style="max-height: 380px;">
                                         <div class="text-center text-muted py-4" id="emptyNotificationMessage">
                                             <i class="bi bi-bell-slash d-block fs-2 mb-2"></i>
                                             Brak nowych powiadomień
@@ -145,19 +171,21 @@
                             </li>
 
                             <li class="nav-item dropdown">
-                                <a class="nav-link dropdown-toggle text-neon d-flex align-items-center" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <a class="nav-link dropdown-toggle text-neon d-flex align-items-center" href="#"
+                                    role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                     @if (currentUser != null && !string.IsNullOrEmpty(currentUser.ProfilePicturesPath))
                                     {
-                                        <img src="~/uploads/profiles/@currentUser.ProfilePicturesPath" 
-                                             class="rounded-circle me-2 border border-neon" 
-                                             style="width: 50px; height: 50px; object-fit: cover; cursor: pointer;" 
-                                             onclick="event.stopPropagation(); Swal.fire({ imageUrl: '/uploads/profiles/@currentUser.ProfilePicturesPath', background: '#1e1e1e', showConfirmButton: false, showCloseButton: true });" />
+                                        <img src="~/uploads/profiles/@currentUser.ProfilePicturesPath"
+                                            class="rounded-circle me-2 border border-neon"
+                                            style="width: 50px; height: 50px; object-fit: cover; cursor: pointer;"
+                                            onclick="event.stopPropagation(); Swal.fire({ imageUrl: '/uploads/profiles/@currentUser.ProfilePicturesPath', background: '#1e1e1e', showConfirmButton: false, showCloseButton: true });" />
                                     }
                                     else
                                     {
                                         <i class="bi bi-person-circle me-2" style="font-size: 1.5rem;"></i>
                                     }
-                                    Witaj, @(User.IsInRole("Admin") ? "Adminie" : (currentUser?.Imie ?? User.Identity.Name))!
+                                    Witaj, @(User.IsInRole("Admin") ? "Adminie" : (currentUser?.Imie ??
+                                 User.Identity.Name))!
                                 </a>
                                 <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark gym-card border-secondary">
                                     <li>
@@ -165,9 +193,12 @@
                                             <i class="bi bi-person-circle me-1"></i> Moje Konto
                                         </a>
                                     </li>
-                                    <li><hr class="dropdown-divider border-secondary"></li>
                                     <li>
-                                        <form class="form-inline" asp-controller="Account" asp-action="Logout" method="post">
+                                        <hr class="dropdown-divider border-secondary">
+                                    </li>
+                                    <li>
+                                        <form class="form-inline" asp-controller="Account" asp-action="Logout"
+                                            method="post">
                                             <button type="submit" class="dropdown-item text-danger">
                                                 <i class="bi bi-box-arrow-right me-1"></i> Wyloguj
                                             </button>
@@ -205,15 +236,15 @@
             color: '#fff',
             iconColor: '#0df055'
         });
-        
-        window.gymAlert = function(msg, iconType = 'warning') {
+
+        window.gymAlert = function (msg, iconType = 'warning') {
             Toast.fire({
                 icon: iconType,
                 title: msg
             });
         };
 
-        window.gymConfirm = function(msg, confirmCallback) {
+        window.gymConfirm = function (msg, confirmCallback) {
             Swal.fire({
                 title: 'Jesteś pewien?',
                 text: msg,
@@ -233,7 +264,7 @@
         }
 
         // Globalny modal z polem tekstowym (SweetAlert2) do pobierania danych od użytkownika.
-        window.gymPrompt = function(msg, confirmCallback) {
+        window.gymPrompt = function (msg, confirmCallback) {
             Swal.fire({
                 title: 'Podaj powód',
                 text: msg,
@@ -247,7 +278,7 @@
                 cancelButtonColor: '#6c757d',
                 confirmButtonText: 'Zatwierdź',
                 cancelButtonText: 'Anuluj',
-                
+
                 // Walidacja: blokuje zatwierdzenie, jeśli wpisano nic lub same spacje (.trim)
                 inputValidator: (value) => {
                     if (!value || value.trim() === '') {
@@ -263,7 +294,7 @@
             });
         }
 
-        window.gymOptionalPrompt = function(msg, confirmCallback) {
+        window.gymOptionalPrompt = function (msg, confirmCallback) {
             Swal.fire({
                 title: 'Opcjonalny powód',
                 text: msg,
@@ -295,271 +326,270 @@
         }
     </script>
     <script src="~/js/site.js" asp-append-version="true"></script>
-    
+
     <!-- SignalR: Biblioteka kliencka dostarczana z Microsoft CDN. 
          Dzięki niej przeglądarka może nawiązać trwałe, dwukierunkowe połączenie z naszym serwerem (WebSockets). -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
     <script>
-        // C# wewnątrz JavaScript: Sprawdzamy na serwerze, czy użytkownik jest zalogowany.
-        // Jeśli tak, renderujemy poniższy kod JS. Jeśli nie, przeglądarka w ogóle go nie otrzyma (bezpieczeństwo!).
+            // C# wewnątrz JavaScript: Sprawdzamy na serwerze, czy użytkownik jest zalogowany.
+            // Jeśli tak, renderujemy poniższy kod JS. Jeśli nie, przeglądarka w ogóle go nie otrzyma (bezpieczeństwo!).
         @if (User.Identity?.IsAuthenticated == true)
         {
             <text>
-            // Zdarzenie 'DOMContentLoaded' uruchamia się, gdy przeglądarka w pełni wczyta strukturę HTML strony.
-            document.addEventListener("DOMContentLoaded", function () {
-                
-                // 1. Budujemy połączenie z naszym Hubem SignalR zmapowanym pod adresem "/notificationHub"
-                const connection = new signalR.HubConnectionBuilder()
+                // Zdarzenie 'DOMContentLoaded' uruchamia się, gdy przeglądarka w pełni wczyta strukturę HTML strony.
+                    document.addEventListener("DOMContentLoaded", function () {
+
+                    // 1. Budujemy połączenie z naszym Hubem SignalR zmapowanym pod adresem "/notificationHub"
+                    const connection = new signalR.HubConnectionBuilder()
                     .withUrl("/notificationHub")
                     .withAutomaticReconnect() // SignalR automatycznie spróbuje odnowić połączenie w razie utraty internetu
                     .build();
 
-                // 2. Rejestrujemy odbiornik zdarzeń o nazwie "ReceiveNotification".
-                // Serwer (C#) wywołuje tę metodę i przesyła obiekt powiadomienia ('notification').
-                connection.on("ReceiveNotification", function (notification) {
-                    // Dodajemy powiadomienie na listę z parametrem true (oznacza to, że jest to nowe, dopiero co odebrane powiadomienie)
-                    addNotificationToList(notification, true);
-                    
+                    // 2. Rejestrujemy odbiornik zdarzeń o nazwie "ReceiveNotification".
+                    // Serwer (C#) wywołuje tę metodę i przesyła obiekt powiadomienia ('notification').
+                    connection.on("ReceiveNotification", function (notification) {
+                        // Dodajemy powiadomienie na listę z parametrem true (oznacza to, że jest to nowe, dopiero co odebrane powiadomienie)
+                        addNotificationToList(notification, true);
+
                     // Pokazujemy nowoczesny alert na ekranie za pomocą naszej biblioteki SweetAlert2
                     gymAlert(`🔔 ${notification.title}: ${notification.message}`, "info");
+                    });
+
+                    // 3. Rozpoczynamy połączenie z serwerem. W razie niepowodzenia wypisujemy błąd w konsoli (F12).
+                    connection.start().catch(err => console.error("Błąd połączenia SignalR:", err.toString()));
+
+                    // 4. Przy pierwszym wejściu na stronę ładujemy z bazy danych wszystkie dotychczasowe nieprzeczytane powiadomienia
+                    loadUnreadNotifications();
                 });
 
-                // 3. Rozpoczynamy połączenie z serwerem. W razie niepowodzenia wypisujemy błąd w konsoli (F12).
-                connection.start().catch(err => console.error("Błąd połączenia SignalR:", err.toString()));
-                
-                // 4. Przy pierwszym wejściu na stronę ładujemy z bazy danych wszystkie dotychczasowe nieprzeczytane powiadomienia
-                loadUnreadNotifications();
-            });
+                    // Pobiera nieprzeczytane powiadomienia z naszego API za pomocą technologii AJAX (fetch).
+                    function loadUnreadNotifications() {
+                        // Wysyłamy zapytanie GET pod adres 'api/notification/unread'
+                        fetch('/api/notification/unread')
+                            .then(res => res.json()) // Konwertujemy odpowiedź serwera na obiekt JavaScript (JSON)
+                            .then(notifications => {
+                                // Pobieramy referencje do elementów na stronie (DOM)
+                                const list = document.getElementById('notificationList');
+                                const emptyMsg = document.getElementById('emptyNotificationMessage');
+                                const badge = document.getElementById('notificationBadge');
 
-            // Pobiera nieprzeczytane powiadomienia z naszego API za pomocą technologii AJAX (fetch).
-            function loadUnreadNotifications() {
-                // Wysyłamy zapytanie GET pod adres 'api/notification/unread'
-                fetch('/api/notification/unread')
-                    .then(res => res.json()) // Konwertujemy odpowiedź serwera na obiekt JavaScript (JSON)
-                    .then(notifications => {
-                        // Pobieramy referencje do elementów na stronie (DOM)
-                        const list = document.getElementById('notificationList');
+                                list.innerHTML = ''; // Czyścimy listę powiadomień przed wstawieniem nowych
+
+                                if (notifications.length > 0) {
+                                    // Jeśli są powiadomienia:
+                                    emptyMsg.classList.add('d-none'); // Ukrywamy komunikat "Brak powiadomień"
+                                    badge.classList.remove('d-none'); // Pokazujemy czerwony dzwoneczek (licznik)
+                                    badge.innerText = notifications.length; // Ustawiamy liczbę nieprzeczytanych powiadomień
+
+                                    // Przechodzimy przez każde pobrane powiadomienie i dodajemy je na listę (false = to powiadomienia historyczne)
+                                    notifications.forEach(n => addNotificationToList(n, false));
+                                } else {
+                                    // Jeśli nie ma żadnych powiadomień:
+                                    emptyMsg.classList.remove('d-none'); // Pokazujemy napis "Brak nowych powiadomień"
+                                    badge.classList.add('d-none'); // Ukrywamy czerwony dzwoneczek
+                                    badge.innerText = '0';
+                                }
+                            })
+                            .catch(err => console.error("Błąd pobierania powiadomień:", err));
+                }
+
+                    // Pomocnicza funkcja do zabezpieczania tekstu przed atakami XSS (HTML Encoding).
+                    // BEZPIECZEŃSTWO FRONTENDU (XSS Prevention):
+                    // Ta funkcja koduje dynamiczne dane wejściowe z bazy danych przed ich wstrzyknięciem do 'innerHTML'.
+                    // Zapobiega to wykonaniu złośliwego kodu JavaScript przesyłanego w tytułach lub treściach.
+                    //
+                    // SPECJALNE ZABEZPIECZENIE DLA SILNIKA RAZOR:
+                    // Używamy ucieczek hex '\x22' (cudzysłów) oraz '\x27' (apostrof) zamiast literalnych znaków cudzysłowu i apostrofu.
+                    // Zapobiega to błędnej interpretacji kodu JavaScript przez parser Razor w pliku .cshtml jako atrybutów tagów HTML,
+                    // co w przeciwnym razie prowadziło do błędów kompilacji CS0426 oraz CS0246 podczas generowania widoku.
+                    function escapeHtml(str) {
+                        if (!str) return '';
+                        return String(str)
+                            .replace(new RegExp('&', 'g'), '&amp;')
+                            .replace(new RegExp('<', 'g'), '&lt;')
+                            .replace(new RegExp('>', 'g'), '&gt;')
+                            .replace(new RegExp('"', 'g'), '&quot;')
+                            .replace(new RegExp("'", 'g'), '&#039;');
+                    }
+
+                        // Tworzy elementy HTML dla pojedynczego powiadomienia i wstawia je do dropdowna.
+                        function addNotificationToList(notification, isNew) {
+                    const list = document.getElementById('notificationList');
                         const emptyMsg = document.getElementById('emptyNotificationMessage');
                         const badge = document.getElementById('notificationBadge');
-                        
-                        list.innerHTML = ''; // Czyścimy listę powiadomień przed wstawieniem nowych
-                        
-                        if (notifications.length > 0) {
-                            // Jeśli są powiadomienia:
-                            emptyMsg.classList.add('d-none'); // Ukrywamy komunikat "Brak powiadomień"
-                            badge.classList.remove('d-none'); // Pokazujemy czerwony dzwoneczek (licznik)
-                            badge.innerText = notifications.length; // Ustawiamy liczbę nieprzeczytanych powiadomień
-                            
-                            // Przechodzimy przez każde pobrane powiadomienie i dodajemy je na listę (false = to powiadomienia historyczne)
-                            notifications.forEach(n => addNotificationToList(n, false));
-                        } else {
-                            // Jeśli nie ma żadnych powiadomień:
-                            emptyMsg.classList.remove('d-none'); // Pokazujemy napis "Brak nowych powiadomień"
-                            badge.classList.add('d-none'); // Ukrywamy czerwony dzwoneczek
-                            badge.innerText = '0';
-                        }
-                    })
-                    .catch(err => console.error("Błąd pobierania powiadomień:", err));
-            }
 
-            // Pomocnicza funkcja do zabezpieczania tekstu przed atakami XSS (HTML Encoding).
-            // BEZPIECZEŃSTWO FRONTENDU (XSS Prevention):
-            // Ta funkcja koduje dynamiczne dane wejściowe z bazy danych przed ich wstrzyknięciem do 'innerHTML'.
-            // Zapobiega to wykonaniu kodu JavaScript (np. <script>alert(1)</script>) przesyłanego w tytułach lub treściach.
-            //
-            // SPECJALNE ZABEZPIECZENIE DLA SILNIKA RAZOR:
-            // Używamy ucieczek hex '\x22' (cudzysłów) oraz '\x27' (apostrof) zamiast literalnych znaków cudzysłowu i apostrofu.
-            // Zapobiega to błędnej interpretacji kodu JavaScript przez parser Razor w pliku .cshtml jako atrybutów tagów HTML,
-            // co w przeciwnym razie prowadziło do błędów kompilacji CS0426 oraz CS0246 podczas generowania widoku.
-            function escapeHtml(str) {
-                if (!str) return '';
-                var map = {
-                    '&': '&amp;',
-                    '<': '&lt;',
-                    '>': '&gt;',
-                    '\x22': '&quot;',
-                    '\x27': '&#039;'
-                };
-                return String(str).replace(/[&<>\x22\x27]/g, function(m) { return map[m]; });
-            }
+                        // Jeśli to jest NOWE powiadomienie (odebrane przed chwilą przez SignalR)
+                        if (isNew) {
+                            emptyMsg.classList.add('d-none'); // Ukrywamy komunikat o braku powiadomień
+                        badge.classList.remove('d-none'); // Pokazujemy licznik
 
-            // Tworzy elementy HTML dla pojedynczego powiadomienia i wstawia je do dropdowna.
-            function addNotificationToList(notification, isNew) {
-                const list = document.getElementById('notificationList');
-                const emptyMsg = document.getElementById('emptyNotificationMessage');
-                const badge = document.getElementById('notificationBadge');
-                
-                // Jeśli to jest NOWE powiadomienie (odebrane przed chwilą przez SignalR)
-                if (isNew) {
-                    emptyMsg.classList.add('d-none'); // Ukrywamy komunikat o braku powiadomień
-                    badge.classList.remove('d-none'); // Pokazujemy licznik
-                    
-                    // Zwiększamy licznik powiadomień o 1
-                    const currentCount = parseInt(badge.innerText) || 0;
-                    badge.innerText = currentCount + 1;
-                }
-                
-                // Pobieramy rolę zalogowanego użytkownika (wstrzyknięta z serwera w C#)
-                const userRole = '@(User.IsInRole("Admin") ? "Admin" : (User.IsInRole("Trener") ? "Trener" : "Klient"))';
-                let redirectUrl = null;
+                        // Zwiększamy licznik powiadomień o 1
+                        const currentCount = parseInt(badge.innerText) || 0;
+                        badge.innerText = currentCount + 1;
+                    }
 
-                // Określamy ścieżkę przekierowania na podstawie typu powiadomienia i roli
-                if (notification.type === 'System' || notification.title === 'Nowy Trener do weryfikacji') {
-                    if (userRole === 'Admin') redirectUrl = '/Admin/Requests';
-                } else if (notification.type === 'Zaproszenie') {
-                    if (userRole === 'Klient') redirectUrl = '/Klient/Requests';
-                } else if (notification.type === 'Trening') {
-                    if (userRole === 'Admin') redirectUrl = '/Admin/Calendar';
-                    else if (userRole === 'Trener') redirectUrl = '/Trener/Index';
-                    else if (userRole === 'Klient') redirectUrl = '/Klient/Index';
-                } else if (notification.type === 'KoniecWspolpracy') {
-                    if (userRole === 'Trener') redirectUrl = '/Trener/Index';
-                    else if (userRole === 'Klient') redirectUrl = '/Klient/Index';
-                }
+                        // Pobieramy rolę zalogowanego użytkownika (wstrzyknięta z serwera w C#)
+                        const userRole = '@(User.IsInRole("Admin") ? "Admin" : (User.IsInRole("Trener") ? "Trener" : "Klient"))';
+                        let redirectUrl = null;
 
-                // Tworzymy nowy element listy <li>
-                const item = document.createElement('li');
-                
-                // Dodajemy klasy Bootstrapa oraz naszą klasę 'notification-item'.
-                // Jeśli powiadomienie jest nowe (isNew == true), dodajemy klasę 'notification-new-glow', która daje neonowy efekt rozbłysku CSS!
-                item.className = `list-group-item bg-transparent text-white border-bottom border-secondary-subtle py-2 px-3 position-relative notification-item ${isNew ? 'notification-new-glow' : ''}`;
-                item.id = `notification-${notification.id}`; // Nadajemy unikalne ID, żeby łatwo usunąć element z drzewa DOM
-                
-                if (redirectUrl) {
-                    item.style.cursor = 'pointer';
-                    item.onclick = function (e) {
-                        // Jeśli kliknięto przycisk "X" (lub jego ikonę), nie przekierowujemy, tylko usuwamy
-                        if (e.target.closest('.btn-close-notification')) return;
-                        
-                        // Oznacz jako przeczytane i przekieruj
-                        markNotificationAsReadAndRedirect(notification.id, redirectUrl);
-                    };
-                }
+                        // Określamy ścieżkę przekierowania na podstawie typu powiadomienia i roli
+                        if (notification.type === 'System' || notification.title === 'Nowy Trener do weryfikacji') {
+                        if (userRole === 'Admin') redirectUrl = '/Admin/Requests';
+                    } else if (notification.type === 'Zaproszenie') {
+                        if (userRole === 'Klient') redirectUrl = '/Klient/Requests';
+                    } else if (notification.type === 'Trening') {
+                        if (userRole === 'Admin') redirectUrl = '/Admin/Calendar';
+                        else if (userRole === 'Trener') redirectUrl = '/Trener/Index';
+                        else if (userRole === 'Klient') redirectUrl = '/Klient/Index';
+                    } else if (notification.type === 'KoniecWspolpracy') {
+                        if (userRole === 'Trener') redirectUrl = '/Trener/Index';
+                        else if (userRole === 'Klient') redirectUrl = '/Klient/Index';
+                    }
 
-                // Dopasowujemy ikonę na podstawie typu powiadomienia
-                let iconClass = 'bi-info-circle-fill text-info';
-                if (notification.type === 'Zaproszenie') iconClass = 'bi-person-plus-fill text-warning';
-                else if (notification.type === 'KoniecWspolpracy') iconClass = 'bi-person-x-fill text-danger';
-                else if (notification.type === 'Trening') iconClass = 'bi-calendar-event-fill text-neon';
+                    // Tworzymy nowy element listy <li>
+                            const item = document.createElement('li');
 
-                // Budujemy strukturę wewnętrzną HTML powiadomienia (w tym przycisk X do usuwania)
-                // Wszystkie dane wstrzykiwane z bazy danych są kodowane przy użyciu funkcji escapeHtml w celu zapobieżenia ataku XSS
-                item.innerHTML = `
-                    <div class="d-flex align-items-start gap-2">
-                        <i class="bi ${iconClass} fs-5 mt-1"></i>
-                        <div class="flex-grow-1">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <strong class="text-white small">${escapeHtml(notification.title)}</strong>
-                                <span class="text-muted" style="font-size: 0.75rem;">${escapeHtml(notification.createdAt)}</span>
+                            // Dodajemy klasy Bootstrapa oraz naszą klasę 'notification-item'.
+                            // Jeśli powiadomienie jest nowe (isNew == true), dodajemy klasę 'notification-new-glow', która daje neonowy efekt rozbłysku CSS!
+                            item.className = `list-group-item bg-transparent text-white border-bottom border-secondary-subtle py-2 px-3 position-relative notification-item ${isNew ? 'notification-new-glow' : ''}`;
+                            item.id = `notification-${notification.id}`; // Nadajemy unikalne ID, żeby łatwo usunąć element z drzewa DOM
+
+                            if (redirectUrl) {
+                                item.style.cursor = 'pointer';
+                            item.onclick = function (e) {
+                            // Jeśli kliknięto przycisk "X" (lub jego ikonę), nie przekierowujemy, tylko usuwamy
+                            if (e.target.closest('.btn-close-notification')) return;
+
+                            // Oznacz jako przeczytane i przekieruj
+                            markNotificationAsReadAndRedirect(notification.id, redirectUrl);
+                        };
+                    }
+
+                            // Dopasowujemy ikonę na podstawie typu powiadomienia
+                            let iconClass = 'bi-info-circle-fill text-info';
+                            if (notification.type === 'Zaproszenie') iconClass = 'bi-person-plus-fill text-warning';
+                            else if (notification.type === 'KoniecWspolpracy') iconClass = 'bi-person-x-fill text-danger';
+                            else if (notification.type === 'Trening') iconClass = 'bi-calendar-event-fill text-neon';
+
+                            // Budujemy strukturę wewnętrzną HTML powiadomienia (w tym przycisk X do usuwania)
+                            // Wszystkie dane wstrzykiwane z bazy danych są kodowane przy użyciu funkcji escapeHtml w celu zapobieżenia ataku XSS
+                            item.innerHTML = `
+                            <div class="d-flex align-items-start gap-2">
+                                <i class="bi ${iconClass} fs-5 mt-1"></i>
+                                <div class="flex-grow-1">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <strong class="text-white small">${escapeHtml(notification.title)}</strong>
+                                        <span class="text-muted" style="font-size: 0.75rem;">${escapeHtml(notification.createdAt)}</span>
+                                    </div>
+                                    <p class="mb-0 text-gray-300 small mt-1" style="line-height: 1.25;">${escapeHtml(notification.message)}</p>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-link p-0 hover-neon-x text-muted ms-2 btn-close-notification" onclick="event.stopPropagation(); markNotificationAsRead(${notification.id})" title="Usuń">
+                                    <i class="bi bi-x-lg fs-6"></i>
+                                </button>
                             </div>
-                            <p class="mb-0 text-gray-300 small mt-1" style="line-height: 1.25;">${escapeHtml(notification.message)}</p>
-                        </div>
-                        <button type="button" class="btn btn-sm btn-link p-0 hover-neon-x text-muted ms-2 btn-close-notification" onclick="event.stopPropagation(); markNotificationAsRead(${notification.id})" title="Usuń">
-                            <i class="bi bi-x-lg fs-6"></i>
-                        </button>
-                    </div>
-                `;
-                
-                if (isNew) {
-                    // Nowe powiadomienia wstawiamy na samą górę listy (insertBefore)
-                    list.insertBefore(item, list.firstChild);
-                    
-                    // Po 5 sekundach wyłączamy efekt rozbłysku neonowego, żeby powiadomienie wtopiło się w resztę listy
-                    setTimeout(() => item.classList.remove('notification-new-glow'), 5000);
-                } else {
-                    // Stare powiadomienia dołączamy na koniec (appendChild)
-                    list.appendChild(item);
+                            `;
+
+                            if (isNew) {
+                                // Nowe powiadomienia wstawiamy na samą górę listy (insertBefore)
+                                list.insertBefore(item, list.firstChild);
+
+                        // Po 5 sekundach wyłączamy efekt rozbłysku neonowego, żeby powiadomienie wtopiło się w resztę listy
+                        setTimeout(() => item.classList.remove('notification-new-glow'), 5000);
+                    } else {
+                                // Stare powiadomienia dołączamy na koniec (appendChild)
+                                list.appendChild(item);
+                    }
                 }
-            }
 
-            // Oznacza powiadomienie jako przeczytane i przekierowuje na podaną stronę
-            function markNotificationAsReadAndRedirect(id, redirectUrl) {
-                fetch('/api/notification/mark-read', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
-                    },
-                    body: JSON.stringify(id)
-                })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.success) {
-                        window.location.href = redirectUrl;
-                    }
-                })
-                .catch(err => {
-                    console.error("Błąd przekierowania powiadomienia:", err);
-                    window.location.href = redirectUrl; // I tak przekierowujemy w razie problemów z siecią
-                });
-            }
+                            // Oznacza powiadomienie jako przeczytane i przekierowuje na podaną stronę
+                            function markNotificationAsReadAndRedirect(id, redirectUrl) {
+                                fetch('/api/notification/mark-read', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                                    },
+                                    body: JSON.stringify(id)
+                                })
+                                    .then(res => res.json())
+                                    .then(data => {
+                                        if (data.success) {
+                                            window.location.href = redirectUrl;
+                                        }
+                                    })
+                                    .catch(err => {
+                                        console.error("Błąd przekierowania powiadomienia:", err);
+                                        window.location.href = redirectUrl; // I tak przekierowujemy w razie problemów z siecią
+                                    });
+                }
 
-            // Oznacza powiadomienie jako przeczytane wysyłając żądanie POST do API i usuwa je z widoku.
-            function markNotificationAsRead(id) {
-                // Wysyłamy zapytanie POST pod adres '/api/notification/mark-read'
-                fetch('/api/notification/mark-read', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        // Zabezpieczenie CSRF: Pobieramy token walidacyjny wygenerowany przez ASP.NET Core
-                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
-                    },
-                    body: JSON.stringify(id) // Przesyłamy ID powiadomienia w ciele zapytania
-                })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.success) {
-                        // Szukamy elementu na stronie po jego unikalnym ID
-                        const item = document.getElementById(`notification-${id}`);
-                        if (item) {
-                            // Dajemy płynny efekt wygaszania (fade-out) za pomocą CSS (transition: opacity)
-                            item.style.opacity = '0';
-                            
-                            // Czekamy 300 milisekund aż skończy się animacja wygaszania i usuwamy element z drzewa DOM
-                            setTimeout(() => {
-                                item.remove();
-                                loadUnreadNotifications(); // Przeliczamy i odświeżamy licznik dzwoneczka
-                            }, 300);
-                        }
-                    }
-                })
-                .catch(err => console.error(err));
-            }
+                            // Oznacza powiadomienie jako przeczytane wysyłając żądanie POST do API i usuwa je z widoku.
+                            function markNotificationAsRead(id) {
+                                // Wysyłamy zapytanie POST pod adres '/api/notification/mark-read'
+                                fetch('/api/notification/mark-read', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        // Zabezpieczenie CSRF: Pobieramy token walidacyjny wygenerowany przez ASP.NET Core
+                                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                                    },
+                                    body: JSON.stringify(id) // Przesyłamy ID powiadomienia w ciele zapytania
+                                })
+                                    .then(res => res.json())
+                                    .then(data => {
+                                        if (data.success) {
+                                            // Szukamy elementu na stronie po jego unikalnym ID
+                                            const item = document.getElementById(`notification-${id}`);
+                                            if (item) {
+                                                // Dajemy płynny efekt wygaszania (fade-out) za pomocą CSS (transition: opacity)
+                                                item.style.opacity = '0';
 
-            // Oznacza wszystkie powiadomienia zalogowanego użytkownika jako przeczytane.
-            function markAllNotificationsAsRead() {
-                // Wysyłamy zapytanie POST bez ciała wiadomości
-                fetch('/api/notification/mark-all-read', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
-                    }
-                })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.success) {
-                        const list = document.getElementById('notificationList');
-                        
-                        // Wygaszamy całą listę powiadomień jednocześnie
-                        list.style.opacity = '0';
-                        
-                        setTimeout(() => {
-                            list.innerHTML = ''; // Czyścimy zawartość listy
-                            list.style.opacity = '1'; // Przywracamy widoczność
-                            loadUnreadNotifications(); // Pobieramy na nowo stan pusty
-                            
-                            // Wyświetlamy piękny toast SweetAlert2 informujący o sukcesie
-                            gymAlert("Wszystkie powiadomienia zostały oznaczone jako przeczytane.", "success");
-                        }, 300);
-                    }
-                })
-                .catch(err => console.error(err));
-            }
+                                                // Czekamy 300 milisekund aż skończy się animacja wygaszania i usuwamy element z drzewa DOM
+                                                setTimeout(() => {
+                                                    item.remove();
+                                                    loadUnreadNotifications(); // Przeliczamy i odświeżamy licznik dzwoneczka
+                                                }, 300);
+                                            }
+                                        }
+                                    })
+                                    .catch(err => console.error(err));
+                }
+
+                            // Oznacza wszystkie powiadomienia zalogowanego użytkownika jako przeczytane.
+                            function markAllNotificationsAsRead() {
+                                // Wysyłamy zapytanie POST bez ciała wiadomości
+                                fetch('/api/notification/mark-all-read', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                                    }
+                                })
+                                    .then(res => res.json())
+                                    .then(data => {
+                                        if (data.success) {
+                                            const list = document.getElementById('notificationList');
+
+                                            // Wygaszamy całą listę powiadomień jednocześnie
+                                            list.style.opacity = '0';
+
+                                            setTimeout(() => {
+                                                list.innerHTML = ''; // Czyścimy zawartość listy
+                                                list.style.opacity = '1'; // Przywracamy widoczność
+                                                loadUnreadNotifications(); // Pobieramy na nowo stan pusty
+
+                                                // Wyświetlamy piękny toast SweetAlert2 informujący o sukcesie
+                                                gymAlert("Wszystkie powiadomienia zostały oznaczone jako przeczytane.", "success");
+                                            }, 300);
+                                        }
+                                    })
+                                    .catch(err => console.error(err));
+                }
             </text>
         }
     </script>
 
     @await RenderSectionAsync("Scripts", required: false)
 </body>
+
 </html>

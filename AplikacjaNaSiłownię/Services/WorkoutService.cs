@@ -96,10 +96,14 @@ namespace AplikacjaNaSiłownię.Services
                 if (workout.ClientId != editorId) return false;
             }
 
-            // Walidacja daty (zapobieganie ustawieniu treningu na czas przeszły)
-            var now = TimeHelper.GetPolishTime();
-            var nowTrimmed = new DateTime(now.Year, now.Month, now.Day, now.Hour, now.Minute, 0);
-            if (model.StartDate < nowTrimmed) return false;
+            // Walidację daty rozpoczęcia wykonujemy tylko przy jej rzeczywistej zmianie.
+            // Zapobiega to blokowaniu edycji innych pól (np. opisu czy tytułu) dla treningów, które już się odbyły lub trwają.
+            if (workout.StartDate != model.StartDate)
+            {
+                var now = TimeHelper.GetPolishTime();
+                var nowTrimmed = new DateTime(now.Year, now.Month, now.Day, now.Hour, now.Minute, 0);
+                if (model.StartDate < nowTrimmed) return false;
+            }
 
             // KROK: Walidacja logiczna czasu trwania przy edycji
             if (model.EndDate.HasValue && model.EndDate.Value <= model.StartDate) return false;

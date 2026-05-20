@@ -2,6 +2,8 @@
 
 @{
     ViewData["Title"] = "Panel Trenera";
+
+    ViewData["BodyClass"] = "bg-app-general";
 }
 
 <div class="row mb-4">
@@ -18,15 +20,19 @@
 </div>
 
 <div class="row">
-    @if(!Model.Any())
+    @if (!Model.Any())
+
     {
         <div class="col-12 border border-secondary p-5 text-center gym-card rounded-4">
             <h4 class="text-white-50">Nie masz jeszcze przypisanych klientów.</h4>
         </div>
     }
+
     else
+
     {
-        @foreach(var client in Model)
+        @foreach (var client in Model)
+
         {
             <div class="col-md-4 mb-4">
                 <div class="card gym-card h-100 border-0 shadow">
@@ -36,7 +42,7 @@
                         </div>
                         <h4 class="text-white">@client.Imie @client.Nazwisko</h4>
                         <p class="text-muted mb-4">@client.Email</p>
-                        
+
                         <div class="d-grid gap-2">
                             <a asp-action="ClientCalendar" asp-route-id="@client.Id" class="btn btn-neon">
                                 <i class="bi bi-calendar-event"></i> Podgląd kalendarza
@@ -54,37 +60,37 @@
 
 @section Scripts {
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             const removeButtons = document.querySelectorAll('.btn-remove-client');
-            
+
             removeButtons.forEach(btn => {
-                btn.addEventListener('click', function() {
+                btn.addEventListener('click', function () {
                     const clientId = this.getAttribute('data-id');
-                    
-                    gymPrompt("Zanim zakończysz współpracę z tym klientem, podaj powód. Zostanie on zapisany w historii.", function(reason) {
+
+                    gymPrompt("Zanim zakończysz współpracę z tym klientem, podaj powód. Zostanie on zapisany w historii.", function (reason) {
                         const payload = { clientId: clientId, reason: reason };
-                        
+
                         fetch('/Trener/RemoveClient', {
                             method: 'POST',
-                            headers: { 
+                            headers: {
                                 'Content-Type': 'application/json',
                                 'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
                             },
                             body: JSON.stringify(payload)
                         })
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.success) {
-                                gymAlert("Klient został odłączony.", "info");
-                                setTimeout(() => location.reload(), 1500);
-                            } else {
-                                gymAlert(data.message || "Wystąpił błąd podczas odłączania klienta.", "error");
-                            }
-                        })
-                        .catch(err => {
-                            console.error(err);
-                            gymAlert("Wystąpił błąd połączenia z serwerem.", "error");
-                        });
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success) {
+                                    gymAlert("Klient został odłączony.", "info");
+                                    setTimeout(() => location.reload(), 1500);
+                                } else {
+                                    gymAlert(data.message || "Wystąpił błąd podczas odłączania klienta.", "error");
+                                }
+                            })
+                            .catch(err => {
+                                console.error(err);
+                                gymAlert("Wystąpił błąd połączenia z serwerem.", "error");
+                            });
                     });
                 });
             });

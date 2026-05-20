@@ -2,6 +2,8 @@
 
 @{
     ViewData["Title"] = "Historia Współpracy";
+
+    ViewData["BodyClass"] = "bg-app-general";
 }
 
 <div class="row mb-4">
@@ -17,6 +19,8 @@
     <div class="col-md-10">
         @if (!Model.Any())
 
+
+
         {
             <div class="card gym-card border-secondary border shadow p-5 text-center rounded-4">
                 <h4 class="text-white-50"><i class="bi bi-clock-history fs-1 d-block mb-3"></i>Brak historii</h4>
@@ -24,7 +28,11 @@
             </div>
         }
 
+
+
         else
+
+
 
         {
             <div class="table-responsive bg-dark rounded-3 shadow">
@@ -50,17 +58,27 @@
                                 <td>
                                     @if (record.EndedByRole == "Trener")
 
+
+
                                     {
                                         <span class="badge bg-danger">Ty</span>
                                     }
 
+
+
                                     else if (record.EndedByRole == "Administrator")
+
+
 
                                     {
                                         <span class="badge bg-secondary">Administrator</span>
                                     }
 
+
+
                                     else
+
+
 
                                     {
                                         <span class="badge bg-warning text-dark">Klient</span>
