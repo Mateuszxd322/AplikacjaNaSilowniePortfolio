@@ -41,8 +41,9 @@ Projekt został zaprojektowany z myślą o pełnej obronie przed atakami z listy
 
 1.  **Pełna Obrona przed IDOR (Insecure Direct Object Reference):**
     *   Wszystkie zapytania AJAX oraz operacje w serwisach biznesowych są rygorystycznie weryfikowane na poziomie serwera. Trener nie ma technicznej możliwości podejrzenia statystyk ani modyfikacji kalendarza klienta, z którym nie ma aktywnej, zatwierdzonej współpracy.
-2.  **Ochrona przed atakami Brute Force i DoS (Rate Limiting):**
-    *   Wdrożono zaawansowaną politykę `RateLimiting` typu Fixed Window w ASP.NET Core. Endpointy rejestracji, logowania oraz zmiany hasła (w profilu) są chronione przed automatycznymi atakami słownikowymi (max 5 prób na 10 sekund z jednego adresu IP).
+2.  **Ochrona przed atakami Brute Force i DoS (Rate Limiting & Identity Lockout):**
+    *   **Rate Limiting (IP Level):** Wdrożono zaawansowaną politykę `RateLimiting` typu Fixed Window w ASP.NET Core. Endpointy rejestracji, logowania oraz zmiany hasła są chronione przed atakami z jednego adresu IP (max 5 prób na 10 sekund), zwracając spersonalizowany, responsywny widok błędu 429 w celu ochrony przed botami.
+    *   **Identity Lockout (User Level):** Skonfigurowano blokadę konta użytkownika na poziomie bazy danych (ASP.NET Core Identity). Po 5 nieudanych próbach logowania konto jest tymczasowo blokowane na 1 minutę, co zapobiega rozproszonym atakom słownikowym (z różnych adresów IP). Formularz logowania został wyposażony w dedykowaną obsługę i przyjazny komunikat o blokadzie.
 3.  **Twarde Zabezpieczenie Uploadu Plików (Magic Numbers Check):**
     *   Przesyłanie awatarów profilowych jest w pełni zabezpieczone: ograniczono rozmiar pliku (max 2MB), zastosowano whitelisting rozszerzeń oraz niskopoziomową weryfikację nagłówków bajtowych (MIME Magic Numbers) dla formatów PNG/JPEG. Całkowicie blokuje to próby wstrzyknięcia złośliwego kodu (atak *Polyglot Upload*).
     *   Pliki są zapisywane pod losowo generowanymi nazwami `Guid`, eliminując ryzyko podatności *Path Traversal*.

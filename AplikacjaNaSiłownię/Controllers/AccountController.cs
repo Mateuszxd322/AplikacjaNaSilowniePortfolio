@@ -150,6 +150,12 @@ namespace AplikacjaNaSiłownię.Controllers
                     return RedirectToAction("Index", "Home");
                 }
 
+                if (result.IsLockedOut)
+                {
+                    ModelState.AddModelError(string.Empty, "To konto zostało tymczasowo zablokowane z powodu zbyt wielu nieudanych prób logowania. Spróbuj ponownie później.");
+                    return View(model);
+                }
+
                 // Zapobieganie User Enumeration
                 ModelState.AddModelError(string.Empty, "Nieprawidłowy e-mail lub hasło.");
             }

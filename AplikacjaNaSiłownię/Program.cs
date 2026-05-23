@@ -21,6 +21,8 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
     options.Password.RequireLowercase = false;
     options.Password.RequireDigit = false;
     options.Password.RequiredLength = 5;
+    options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(1);
+    options.Lockout.MaxFailedAccessAttempts = 5;
 })
 .AddEntityFrameworkStores<ApplicationDbContext>()
 .AddDefaultTokenProviders();
@@ -61,6 +63,42 @@ builder.Services.AddRateLimiter(options =>
 
         // Ustawiamy kod odpowiedzi HTTP 429 (Too Many Requests) dla odrzuconych żądań.
         options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+        // Customowy handler wywoływany w momencie przekroczenia limitu żądań (np. 5 prób w ciągu 10 sekund).
+        // Zapobiega wyświetlaniu domyślnego, mało przyjaznego błędu przeglądarki przy statusie 429.
+        options.OnRejected = async (context, token) =>
+        {
+            context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+
+            // Sprawdzamy nagłówek Accept, aby ustalić czy żądanie oczekuje widoku HTML (przeglądarka) czy JSON (AJAX)
+            var acceptsHtml = context.HttpContext.Request.Headers.Accept.ToString().Contains("text/html");
+
+            if (acceptsHtml)
+            {
+                // Zwracamy spersonalizowany, responsywny widok HTML wczytany z folderu wwwroot
+                context.HttpContext.Response.ContentType = "text/html; charset=utf-8";
+                var env = context.HttpContext.RequestServices.GetRequiredService<IWebHostEnvironment>();
+                var htmlPath = Path.Combine(env.WebRootPath, "errors", "Error_429.html");
+
+                if (File.Exists(htmlPath))
+                {
+                    // Wczytujemy asynchronicznie zawartość pliku Error_429.html, aby nie blokować wątku serwera
+                    var html = await File.ReadAllTextAsync(htmlPath, token);
+                    await context.HttpContext.Response.WriteAsync(html, token);
+                }
+                else
+                {
+                    // Zabezpieczenie awaryjne (fallback) wyświetlające podstawowy komunikat w razie braku pliku na serwerze
+                    await context.HttpContext.Response.WriteAsync("<h1>Zbyt wiele żądań</h1><p>Ze względów bezpieczeństwa ograniczono liczbę połączeń z Twojego IP. Spróbuj ponownie później.</p>", token);
+                }
+            }
+            else
+            {
+                // Dla zapytań asynchronicznych (np. fetch z panelu logowania) zwracamy ustrukturyzowany JSON
+                context.HttpContext.Response.ContentType = "application/json; charset=utf-8";
+                await context.HttpContext.Response.WriteAsJsonAsync(new { success = false, message = "Zbyt wiele prób logowania. Możliwość operacji została tymczasowo ograniczona. Spróbuj ponownie za chwilę." }, token);
+            }
+        };
     }
 );
 
