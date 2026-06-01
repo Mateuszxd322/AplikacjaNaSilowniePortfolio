@@ -15,15 +15,15 @@
                     <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
 
                     <div class="form-floating mb-3">
-                        <input asp-for="Imie" class="form-control gym-input" placeholder="Imię" />
-                        <label asp-for="Imie" class="text-muted">Imię</label>
-                        <span asp-validation-for="Imie" class="text-danger"></span>
+                        <input asp-for="FirstName" class="form-control gym-input" placeholder="Imię" />
+                        <label asp-for="FirstName" class="text-muted">Imię</label>
+                        <span asp-validation-for="FirstName" class="text-danger"></span>
                     </div>
 
                     <div class="form-floating mb-3">
-                        <input asp-for="Nazwisko" class="form-control gym-input" placeholder="Nazwisko" />
-                        <label asp-for="Nazwisko" class="text-muted">Nazwisko</label>
-                        <span asp-validation-for="Nazwisko" class="text-danger"></span>
+                        <input asp-for="LastName" class="form-control gym-input" placeholder="Nazwisko" />
+                        <label asp-for="LastName" class="text-muted">Nazwisko</label>
+                        <span asp-validation-for="LastName" class="text-danger"></span>
                     </div>
 
                     <div class="form-floating mb-3">
@@ -57,12 +57,12 @@
                     </div>
 
                     <div class="form-floating mb-4">
-                        <select asp-for="Rola" class="form-select gym-input">
+                        <select asp-for="Role" class="form-select gym-input">
                             <option value="Klient">Klient</option>
                             <option value="Trener">Trener</option>
                         </select>
-                        <label asp-for="Rola" class="text-muted">Rola w systemie</label>
-                        <span asp-validation-for="Rola" class="text-danger"></span>
+                        <label asp-for="Role" class="text-muted">Rola w systemie</label>
+                        <span asp-validation-for="Role" class="text-danger"></span>
                     </div>
 
                     <div class="d-grid gap-2">

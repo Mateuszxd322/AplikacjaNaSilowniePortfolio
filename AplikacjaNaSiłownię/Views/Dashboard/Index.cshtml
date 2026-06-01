@@ -51,7 +51,7 @@
                         foreach (var client in (List<ApplicationUser>)ViewBag.Clients)
 
                         {
-                            <option value="@client.Id">@client.Imie @client.Nazwisko</option>
+                            <option value="@client.Id">@client.FirstName @client.LastName</option>
                         }
                     }
                     else

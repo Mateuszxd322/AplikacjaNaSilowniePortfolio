@@ -11,7 +11,7 @@ namespace AplikacjaNaSiłownię.Controllers
     [Authorize(Roles = "Trener")]
     // Używamy Primary Constructor (C# 12) do automatycznego przypisania serwisów do pól prywatnych.
     public class TrenerController(
-        UserManager<ApplicationUser> userManager, 
+        UserManager<ApplicationUser> userManager,
         ApplicationDbContext context,
         Services.IUserService userService,
         Services.IWorkoutService workoutService,
@@ -29,9 +29,9 @@ namespace AplikacjaNaSiłownię.Controllers
             // OPTYMALIZACJA EF CORE: Filtrujemy dane po stronie SQL (.Where przed .ToListAsync()).
             // Pozwala to uniknąć pobierania wszystkich użytkowników do pamięci RAM serwera.
             var clients = await _userManager.Users
-                .Where(u => u.Rola == "Klient" && u.TrenerId == trenerId)
+                .Where(u => u.Role == "Klient" && u.TrainerId == trenerId)
                 .ToListAsync();
-            
+
             return View(clients);
         }
 
@@ -39,15 +39,15 @@ namespace AplikacjaNaSiłownię.Controllers
         public async Task<IActionResult> AvailableClients()
         {
             var trenerId = _userManager.GetUserId(User);
-            
+
             // OPTYMALIZACJA: Wykonujemy dwa precyzyjne zapytania do bazy danych zamiast jednego ogólnego.
             // Pokaż tylko tych, którzy NIE MAJĄ trenera ANI zaproszenia oczekującego
             var availableClients = await _userManager.Users
-                .Where(u => u.Rola == "Klient" && string.IsNullOrEmpty(u.TrenerId) && string.IsNullOrEmpty(u.PendingTrenerId))
+                .Where(u => u.Role == "Klient" && string.IsNullOrEmpty(u.TrainerId) && string.IsNullOrEmpty(u.PendingTrainerId))
                 .ToListAsync();
 
             ViewBag.SentRequests = await _userManager.Users
-                .Where(u => u.Rola == "Klient" && u.PendingTrenerId == trenerId)
+                .Where(u => u.Role == "Klient" && u.PendingTrainerId == trenerId)
                 .ToListAsync();
 
             return View(availableClients);
@@ -63,7 +63,7 @@ namespace AplikacjaNaSiłownię.Controllers
             // 2. Pobieramy ID aktualnie zalogowanego trenera
             var trenerId = _userManager.GetUserId(User);
             if (string.IsNullOrEmpty(trenerId)) return Unauthorized(); // Jeśli trener nie jest zalogowany, zwracamy 401 Unauthorized
-            
+
             // 3. Wyszukujemy klienta w bazie danych po jego identyfikatorze
             var client = await _userManager.FindByIdAsync(clientId);
 
@@ -73,20 +73,20 @@ namespace AplikacjaNaSiłownię.Controllers
             // - Rzeczywiście ma rolę "Klient"
             // - Nie ma jeszcze trenera (client.TrenerId jest puste)
             // - Nie oczekuje już na zaproszenie od innego trenera (client.PendingTrenerId jest puste)
-            if (client != null && client.Rola == "Klient" && string.IsNullOrEmpty(client.TrenerId) && string.IsNullOrEmpty(client.PendingTrenerId))
+            if (client != null && client.Role == "Klient" && string.IsNullOrEmpty(client.TrainerId) && string.IsNullOrEmpty(client.PendingTrainerId))
             {
                 // 5. Wysyłamy zaproszenie – ustawiamy pole 'PendingTrenerId' na ID tego trenera
-                client.PendingTrenerId = trenerId; 
+                client.PendingTrainerId = trenerId;
                 await _userManager.UpdateAsync(client); // Zapisujemy aktualizację w bazie danych Identity
 
                 // 6. Pobieramy pełne dane trenera, aby ładnie sformatować treść powiadomienia
                 var trener = await _userManager.FindByIdAsync(trenerId);
-                
+
                 // 7. Wysyłamy powiadomienie do klienta w czasie rzeczywistym przez nasz serwis powiadomień
                 await _notificationService.SendNotificationAsync(
                     client.Id,
                     "Nowe zaproszenie od trenera",
-                    $"Trener {trener?.Imie} {trener?.Nazwisko} zaprosił Cię do współpracy. Przejdź do zakładki 'Moje Zaproszenia', aby zaakceptować lub odrzucić zaproszenie.",
+                    $"Trener {trener?.FirstName} {trener?.LastName} zaprosił Cię do współpracy. Przejdź do zakładki 'Moje Zaproszenia', aby zaakceptować lub odrzucić zaproszenie.",
                     "Zaproszenie"
                 );
 
@@ -106,23 +106,23 @@ namespace AplikacjaNaSiłownię.Controllers
 
             var trenerId = _userManager.GetUserId(User);
             if (string.IsNullOrEmpty(trenerId)) return Unauthorized();
-            
+
             var client = await _userManager.FindByIdAsync(clientId);
 
             // Weryfikujemy czy klient istnieje, ma rolę "Klient" oraz czy zaproszenie wysłał dokładnie ten trener, który teraz próbuje je cofnąć
-            if (client != null && client.Rola == "Klient" && client.PendingTrenerId == trenerId)
+            if (client != null && client.Role == "Klient" && client.PendingTrainerId == trenerId)
             {
                 // Zerujemy pole zaproszenia (ustawiamy na null), co oznacza anulowanie zaproszenia
-                client.PendingTrenerId = null; 
+                client.PendingTrainerId = null;
                 await _userManager.UpdateAsync(client); // Zapisujemy zmiany
 
                 var trener = await _userManager.FindByIdAsync(trenerId);
-                
+
                 // Wysyłamy powiadomienie do klienta, że zaproszenie zostało wycofane
                 await _notificationService.SendNotificationAsync(
                     client.Id,
                     "Zaproszenie cofnięte",
-                    $"Trener {trener?.Imie} {trener?.Nazwisko} wycofał zaproszenie do współpracy.",
+                    $"Trener {trener?.FirstName} {trener?.LastName} wycofał zaproszenie do współpracy.",
                     "Zaproszenie"
                 );
 
@@ -135,7 +135,7 @@ namespace AplikacjaNaSiłownię.Controllers
         public class RemoveClientRequestDto
         {
             public string ClientId { get; set; } = string.Empty;
-            
+
             [StringLength(500, ErrorMessage = "Powód nie może być dłuższy niż 500 znaków.")]
             public string Reason { get; set; } = string.Empty;
         }
@@ -145,13 +145,13 @@ namespace AplikacjaNaSiłownię.Controllers
         public async Task<IActionResult> RemoveClient([FromBody] RemoveClientRequestDto request)
         {
             // Weryfikacja wejściowa: Upewniamy się, że obiekt żądania oraz identyfikator klienta nie są puste.
-            if (request == null || string.IsNullOrEmpty(request.ClientId)) 
+            if (request == null || string.IsNullOrEmpty(request.ClientId))
                 return BadRequest("Brak ID klienta.");
 
             // LOGIKA ELASTYCZNA (UX): Jeśli trener nie wpisał powodu w oknie dialogowym, 
             // nie odrzucamy żądania błędem 400. Zamiast tego podstawiamy elegancki tekst domyślny.
             var reason = string.IsNullOrWhiteSpace(request.Reason) ? "Brak podanego powodu." : request.Reason;
-            
+
             // OPTYMALIZACJA BAZODANOWA & OCHRONA BUFORA: Jeśli powód jest zbyt długi (np. wstrzyknięty z zewnątrz),
             // zamiast błędu bazy danych, bezpiecznie przycinamy go do dopuszczalnych 500 znaków.
             // Używamy nowoczesnego operatora zakresu C# [..500] (Range Operator) zalecanego przez IDE zamiast Substring.
@@ -162,7 +162,7 @@ namespace AplikacjaNaSiłownię.Controllers
 
             // Wywołujemy bezpieczną metodę z serwisu (z obsługą transakcji i weryfikacją trenera - ochrona IDOR)
             var success = await _userService.TerminateCollaborationAsync(request.ClientId, reason, "Trener", _userManager.GetUserId(User) ?? "");
-            
+
             if (success) return Json(new { success = true });
 
             return Json(new { success = false, message = "Nie można odłączyć tego klienta (brak relacji lub błąd bazy)." });
@@ -173,9 +173,9 @@ namespace AplikacjaNaSiłownię.Controllers
         {
             var trenerId = _userManager.GetUserId(User);
             var history = await _context.CollaborationHistories
-                                        .Where(h => h.TrenerId == trenerId && !h.IsDeletedByTrainer)
-                                        .OrderByDescending(h => h.EndDate)
-                                        .ToListAsync();
+                .Where(h => h.TrainerId == trenerId && !h.IsDeletedByTrainer)
+                .OrderByDescending(h => h.EndDate)
+                .ToListAsync();
             return View(history);
         }
 
@@ -187,16 +187,16 @@ namespace AplikacjaNaSiłownię.Controllers
             if (trenerId == null) return Unauthorized();
 
             var record = await _context.CollaborationHistories.FindAsync(id);
-            if (record != null && record.TrenerId == trenerId)
+            if (record != null && record.TrainerId == trenerId)
             {
                 record.IsDeletedByTrainer = true;
-                
+
                 // Jeśli oboje usunęli, fizycznie skasuj z bazy
                 if (record.IsDeletedByClient && record.IsDeletedByTrainer)
                 {
                     _context.CollaborationHistories.Remove(record);
                 }
-                
+
                 await _context.SaveChangesAsync();
                 return Json(new { success = true });
             }
@@ -212,12 +212,12 @@ namespace AplikacjaNaSiłownię.Controllers
             var client = await _userManager.FindByIdAsync(id);
 
             // Weryfikacja: trener może podglądać tylko swoich klientów
-            if (client == null || client.TrenerId != trenerId)
+            if (client == null || client.TrainerId != trenerId)
             {
                 return Unauthorized("Brak dostępu do tego kalendarza.");
             }
 
-            ViewData["ClientName"] = $"{client.Imie} {client.Nazwisko}";
+            ViewData["ClientName"] = $"{client.FirstName} {client.LastName}";
             ViewData["ClientId"] = client.Id;
 
             return View();
@@ -229,13 +229,14 @@ namespace AplikacjaNaSiłownię.Controllers
             var trenerId = _userManager.GetUserId(User);
             var client = await _userManager.FindByIdAsync(clientId);
 
-            if (client == null || client.TrenerId != trenerId) return Unauthorized();
+            if (client == null || client.TrainerId != trenerId) return Unauthorized();
 
             var dbWorkouts = await _workoutService.GetClientWorkoutsAsync(clientId);
 
-            var workouts = dbWorkouts.Select(w => {
-                return new 
-                { 
+            var workouts = dbWorkouts.Select(w =>
+            {
+                return new
+                {
                     id = w.Id,
                     title = w.Title,
                     start = w.StartDate.ToString("yyyy-MM-ddTHH:mm:ss"),

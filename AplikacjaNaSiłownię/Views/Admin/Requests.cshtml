@@ -29,9 +29,9 @@
                     foreach (var user in Model)
                     {
                         <tr>
-                            <td class="fw-bold">@user.Imie @user.Nazwisko</td>
+                            <td class="fw-bold">@user.FirstName @user.LastName</td>
                             <td>@user.Email</td>
-                            <td><span class="badge bg-warning text-dark">@user.Rola (Oczekujący)</span></td>
+                            <td><span class="badge bg-warning text-dark">@user.Role (Oczekujący)</span></td>
                             <td class="text-end">
                                 <div class="d-flex justify-content-end gap-2">
                                     <form asp-action="ApproveUser" method="post" onsubmit="event.preventDefault(); gymConfirm('Czy na pewno chcesz zatwierdzić tego trenera? Otrzyma on pełny dostęp do aplikacji.', () => this.submit());">

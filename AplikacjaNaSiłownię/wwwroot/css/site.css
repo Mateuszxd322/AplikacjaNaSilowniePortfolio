@@ -297,6 +297,7 @@ body {
   background: linear-gradient(rgba(18, 18, 18, 0.6), rgba(18, 18, 18, 0.6)), url('/images/PodglądKalendarza.jpg') no-repeat center center fixed !important;
   background-size: cover !important;
 }
+
 .bg-app-general {
   background: linear-gradient(rgba(18, 18, 18, 0.7), rgba(18, 18, 18, 0.7)), url('/images/TłoDoAplikacji.jpg') no-repeat center center fixed !important;
   background-size: cover !important;
@@ -346,7 +347,6 @@ body[class^="bg-"] .gym-card {
   background-color: #0df055 !important;
 }
 
-/* === KROK 7: TUTAJ DODAJ PREMIUM STYLE DLA DZWONECZKA (TUTAJ ROZPOCZNIJ PRZEPISYWANIE STYLE) === */
 .notification-item {
   border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
   transition: all 0.3s ease;

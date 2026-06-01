@@ -10,7 +10,6 @@ namespace AplikacjaNaSiłownię.Controllers
     public class AccountController(
         UserManager<ApplicationUser> userManager,
         SignInManager<ApplicationUser> signInManager,
-        RoleManager<IdentityRole> roleManager,
         AplikacjaNaSiłownię.Data.ApplicationDbContext context,
         Services.IUserService userService,
         IWebHostEnvironment webHostEnvironment,
@@ -18,7 +17,6 @@ namespace AplikacjaNaSiłownię.Controllers
     {
         private readonly UserManager<ApplicationUser> _userManager = userManager;
         private readonly SignInManager<ApplicationUser> _signInManager = signInManager;
-        private readonly RoleManager<IdentityRole> _roleManager = roleManager;
         private readonly AplikacjaNaSiłownię.Data.ApplicationDbContext _context = context;
         private readonly Services.IUserService _userService = userService;
         private readonly IWebHostEnvironment _webHostEnvironment = webHostEnvironment;
@@ -41,7 +39,7 @@ namespace AplikacjaNaSiłownię.Controllers
                 // BIAŁA LISTA RÓL: Zabezpieczenie serwerowe przed nieuprawnionym przypisaniem roli.
                 // Akceptujemy tylko "Trener" i "Klient". Każda inna wartość (np. "Admin" wstrzyknięty przez F12)
                 // zostanie natychmiast odrzucona.
-                if (model.Rola != "Trener" && model.Rola != "Klient")
+                if (model.Role != "Trener" && model.Role != "Klient")
                 {
                     ModelState.AddModelError(string.Empty, "Wybrana rola jest nieprawidłowa. Możesz zarejestrować się tylko jako Trener lub Klient.");
                     return View(model);
@@ -57,10 +55,10 @@ namespace AplikacjaNaSiłownię.Controllers
                 {
                     UserName = model.Email,
                     Email = model.Email,
-                    Imie = model.Imie,
-                    Nazwisko = model.Nazwisko,
-                    Rola = model.Rola,
-                    IsApproved = model.Rola != "Trener"
+                    FirstName = model.FirstName,
+                    LastName = model.LastName,
+                    Role = model.Role,
+                    IsApproved = model.Role != "Trener"
                 };
 
                 // TODO: W produkcji użyć silniejszych polityk haseł i dodatkowej walidacji złożoności po stronie serwera
@@ -68,17 +66,7 @@ namespace AplikacjaNaSiłownię.Controllers
 
                 if (result.Succeeded)
                 {
-                    // Upewnienie się, że role istnieją
-                    if (!await _roleManager.RoleExistsAsync("Admin"))
-                        await _roleManager.CreateAsync(new IdentityRole("Admin"));
-                    if (!await _roleManager.RoleExistsAsync("Trener"))
-                        await _roleManager.CreateAsync(new IdentityRole("Trener"));
-                    if (!await _roleManager.RoleExistsAsync("Klient"))
-                        await _roleManager.CreateAsync(new IdentityRole("Klient"));
-
-                    await _userManager.AddToRoleAsync(user, model.Rola);
-
-                    if (model.Rola == "Trener")
+                    if (model.Role == "Trener")
                     {
                         // Powiadomienie wszystkich administratorów o nowej rejestracji trenera
                         var admins = await _userManager.GetUsersInRoleAsync("Admin");
@@ -87,7 +75,7 @@ namespace AplikacjaNaSiłownię.Controllers
                             await _notificationService.SendNotificationAsync(
                                 admin.Id,
                                 "Nowy Trener do weryfikacji",
-                                $"Użytkownik {user.Imie} {user.Nazwisko} ({user.Email}) zarejestrował się jako Trener i oczekuje na zatwierdzenie konta.",
+                                $"Użytkownik {user.FirstName} {user.LastName} ({user.Email}) zarejestrował się jako Trener i oczekuje na zatwierdzenie konta.",
                                 "System"
                             );
                         }
@@ -136,7 +124,7 @@ namespace AplikacjaNaSiłownię.Controllers
                 // Blokujemy logowanie TYLKO dla Trenerów, którzy nie są zatwierdzeni.
                 // Klienci i Admini (szczególnie ci założeni przed dodaniem pola IsApproved)
                 // mogą się logować bez przeszkód.
-                if (user.Rola == "Trener" && !user.IsApproved)
+                if (user.Role == "Trener" && !user.IsApproved)
                 {
                     ModelState.AddModelError(string.Empty, "Konto oczekuje na zatwierdzenie przez administratora. Spróbuj ponownie później.");
                     return View(model);
@@ -182,12 +170,12 @@ namespace AplikacjaNaSiłownię.Controllers
                 return NotFound("Nie znaleziono użytkownika.");
             }
 
-            if (user.Rola == "Klient" && !string.IsNullOrEmpty(user.TrenerId))
+            if (user.Role == "Klient" && !string.IsNullOrEmpty(user.TrainerId))
             {
-                var trener = await _userManager.FindByIdAsync(user.TrenerId);
+                var trener = await _userManager.FindByIdAsync(user.TrainerId);
                 if (trener != null)
                 {
-                    ViewBag.TrenerName = $"{trener.Imie} {trener.Nazwisko}";
+                    ViewBag.TrenerName = $"{trener.FirstName} {trener.LastName}";
                 }
             }
 
@@ -203,7 +191,7 @@ namespace AplikacjaNaSiłownię.Controllers
 
             // Używamy profesjonalnego sposobu pobierania ścieżki do wwwroot
             var webRootPath = _webHostEnvironment.WebRootPath;
-            
+
             var success = await _userService.UpdateProfilePictureAsync(userId, profilePicture, webRootPath);
 
             if (success)

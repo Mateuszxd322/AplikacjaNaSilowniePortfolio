@@ -33,7 +33,7 @@ namespace AplikacjaNaSiłownię.Services
             {
                 // AsNoTracking() poprawia wydajność, bo tylko sprawdzamy istnienie rekordu bez zamiaru jego edycji.
                 var client = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == workout.ClientId);
-                if (client == null || client.TrenerId != creatorId) return false;
+                if (client == null || client.TrainerId != creatorId) return false;
             }
             else if (userRole == "Klient")
             {
@@ -64,12 +64,12 @@ namespace AplikacjaNaSiłownię.Services
             else if (userRole == "Klient")
             {
                 var clientUser = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == workout.ClientId);
-                if (clientUser != null && !string.IsNullOrEmpty(clientUser.TrenerId))
+                if (clientUser != null && !string.IsNullOrEmpty(clientUser.TrainerId))
                 {
                     await _notificationService.SendNotificationAsync(
-                        clientUser.TrenerId,
+                        clientUser.TrainerId,
                         "Nowy trening zaplanowany!",
-                        $"Twój klient {clientUser.Imie} {clientUser.Nazwisko} zaplanował nowy trening '{workout.Title}' na dzień {workout.StartDate:dd.MM.yyyy HH:mm}.",
+                        $"Twój klient {clientUser.FirstName} {clientUser.LastName} zaplanował nowy trening '{workout.Title}' na dzień {workout.StartDate:dd.MM.yyyy HH:mm}.",
                         "Trening"
                     );
                 }
@@ -89,7 +89,7 @@ namespace AplikacjaNaSiłownię.Services
             // Weryfikacja uprawnień: Admin może wszystko, Trener swoich klientów, Klient swoje własne
             if (userRole == "Trener")
             {
-                if (workout.Client == null || workout.Client.TrenerId != editorId) return false;
+                if (workout.Client == null || workout.Client.TrainerId != editorId) return false;
             }
             else if (userRole == "Klient")
             {
@@ -127,12 +127,12 @@ namespace AplikacjaNaSiłownię.Services
             }
             else if (userRole == "Klient")
             {
-                if (workout.Client != null && !string.IsNullOrEmpty(workout.Client.TrenerId))
+                if (workout.Client != null && !string.IsNullOrEmpty(workout.Client.TrainerId))
                 {
                     await _notificationService.SendNotificationAsync(
-                        workout.Client.TrenerId,
+                        workout.Client.TrainerId,
                         "Trening zaktualizowany!",
-                        $"Klient {workout.Client.Imie} {workout.Client.Nazwisko} zmienił szczegóły treningu '{workout.Title}'. Nowy termin: {workout.StartDate:dd.MM.yyyy HH:mm}.",
+                        $"Klient {workout.Client.FirstName} {workout.Client.LastName} zmienił szczegóły treningu '{workout.Title}'. Nowy termin: {workout.StartDate:dd.MM.yyyy HH:mm}.",
                         "Trening"
                     );
                 }
@@ -148,12 +148,12 @@ namespace AplikacjaNaSiłownię.Services
                 );
 
                 // Powiadom trenera (jeśli klient go ma)
-                if (workout.Client != null && !string.IsNullOrEmpty(workout.Client.TrenerId))
+                if (workout.Client != null && !string.IsNullOrEmpty(workout.Client.TrainerId))
                 {
                     await _notificationService.SendNotificationAsync(
-                        workout.Client.TrenerId,
+                        workout.Client.TrainerId,
                         "Trening zaktualizowany przez Admina!",
-                        $"Administrator systemu zmienił szczegóły treningu '{workout.Title}' należącego do Twojego klienta ({workout.Client.Imie} {workout.Client.Nazwisko}). Nowy termin: {workout.StartDate:dd.MM.yyyy HH:mm}.",
+                        $"Administrator systemu zmienił szczegóły treningu '{workout.Title}' należącego do Twojego klienta ({workout.Client.FirstName} {workout.Client.LastName}). Nowy termin: {workout.StartDate:dd.MM.yyyy HH:mm}.",
                         "Trening"
                     );
                 }
@@ -173,7 +173,7 @@ namespace AplikacjaNaSiłownię.Services
             // Weryfikacja uprawnień
             if (userRole == "Trener")
             {
-                if (workout.Client == null || workout.Client.TrenerId != editorId) return false;
+                if (workout.Client == null || workout.Client.TrainerId != editorId) return false;
             }
             else if (userRole == "Klient")
             {
@@ -195,12 +195,12 @@ namespace AplikacjaNaSiłownię.Services
             }
             else if (userRole == "Klient")
             {
-                if (workout.Client != null && !string.IsNullOrEmpty(workout.Client.TrenerId))
+                if (workout.Client != null && !string.IsNullOrEmpty(workout.Client.TrainerId))
                 {
                     await _notificationService.SendNotificationAsync(
-                        workout.Client.TrenerId,
+                        workout.Client.TrainerId,
                         "Trening odwołany!",
-                        $"Klient {workout.Client.Imie} {workout.Client.Nazwisko} odwołał zaplanowany trening '{workout.Title}' na dzień {workout.StartDate:dd.MM.yyyy HH:mm}.",
+                        $"Klient {workout.Client.FirstName} {workout.Client.LastName} odwołał zaplanowany trening '{workout.Title}' na dzień {workout.StartDate:dd.MM.yyyy HH:mm}.",
                         "Trening"
                     );
                 }
@@ -216,12 +216,12 @@ namespace AplikacjaNaSiłownię.Services
                 );
 
                 // Powiadom trenera (jeśli klient go ma)
-                if (workout.Client != null && !string.IsNullOrEmpty(workout.Client.TrenerId))
+                if (workout.Client != null && !string.IsNullOrEmpty(workout.Client.TrainerId))
                 {
                     await _notificationService.SendNotificationAsync(
-                        workout.Client.TrenerId,
+                        workout.Client.TrainerId,
                         "Trening odwołany przez Admina!",
-                        $"Administrator systemu odwołał zaplanowany trening '{workout.Title}' Twojego klienta ({workout.Client.Imie} {workout.Client.Nazwisko}) na dzień {workout.StartDate:dd.MM.yyyy HH:mm}.",
+                        $"Administrator systemu odwołał zaplanowany trening '{workout.Title}' Twojego klienta ({workout.Client.FirstName} {workout.Client.LastName}) na dzień {workout.StartDate:dd.MM.yyyy HH:mm}.",
                         "Trening"
                     );
                 }

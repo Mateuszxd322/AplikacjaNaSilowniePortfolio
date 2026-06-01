@@ -14,7 +14,7 @@ namespace AplikacjaNaSiłownię.Controllers
 {
     // Ograniczamy dostęp do całego kontrolera wyłącznie do zalogowanych użytkowników z rolami: Admin, Trener lub Klient.
     [Authorize(Roles = "Admin,Trener,Klient")]
-    
+
     // Wykorzystujemy funkcjonalność C# 12 - Primary Constructor (Główny Konstruktor klasy).
     // Pozwala on wstrzyknąć zależności (DbContext i UserManager) bezpośrednio w definicji klasy bez pisania tradycyjnego konstruktora.
     public class DashboardController(
@@ -44,8 +44,8 @@ namespace AplikacjaNaSiłownię.Controllers
                 // Admin ma prawo przeglądać statystyki wszystkich klientów zarejestrowanych na siłowni.
                 // Wyciągamy z bazy użytkowników o roli "Klient", sortujemy ich alfabetycznie po nazwisku i pobieramy asynchronicznie listę.
                 clients = await _context.Users
-                    .Where(u => u.Rola == "Klient")
-                    .OrderBy(u => u.Nazwisko)
+                    .Where(u => u.Role == "Klient")
+                    .OrderBy(u => u.LastName)
                     .ToListAsync();
             }
             // Scenariusz B: Zalogowany użytkownik to Trener.
@@ -54,8 +54,8 @@ namespace AplikacjaNaSiłownię.Controllers
                 // Trener może oglądać statystyki wyłącznie tych klientów, którzy są do niego bezpośrednio przypisani.
                 // Filtrujemy po TrenerId równym ID zalogowanego trenera.
                 clients = await _context.Users
-                    .Where(u => u.TrenerId == userId && u.Rola == "Klient")
-                    .OrderBy(u => u.Nazwisko)
+                    .Where(u => u.TrainerId == userId && u.Role == "Klient")
+                    .OrderBy(u => u.LastName)
                     .ToListAsync();
             }
 
@@ -89,12 +89,12 @@ namespace AplikacjaNaSiłownię.Controllers
                     // Sprawdzamy w bazie danych, czy klient o wskazanym ID naprawdę ma przypisanego tego zalogowanego trenera.
                     if (User.IsInRole("Trener"))
                     {
-                        var isClientOfTrainer = await _context.Users.AnyAsync(u => u.Id == clientId && u.TrenerId == currentUserId && u.Rola == "Klient");
-                        
+                        var isClientOfTrainer = await _context.Users.AnyAsync(u => u.Id == clientId && u.TrainerId == currentUserId && u.Role == "Klient");
+
                         // Jeśli trener próbuje ręcznie podmienić ID na klienta innego trenera, serwer odrzuci to żądanie (brak dostępu - HTTP 403).
-                        if (!isClientOfTrainer) return Forbid(); 
+                        if (!isClientOfTrainer) return Forbid();
                     }
-                    
+
                     // Jeśli weryfikacja przeszła pomyślnie, ustawiamy cel zapytań na żądane ID klienta.
                     targetClientId = clientId;
                 }
@@ -104,13 +104,13 @@ namespace AplikacjaNaSiłownię.Controllers
                     // Pobieramy pierwszego lepszego klienta należącego do trenera lub z całej siłowni (dla Admina), aby strona nie wystartowała pusta.
                     if (User.IsInRole("Trener"))
                     {
-                        var firstClient = await _context.Users.FirstOrDefaultAsync(u => u.TrenerId == currentUserId && u.Rola == "Klient");
+                        var firstClient = await _context.Users.FirstOrDefaultAsync(u => u.TrainerId == currentUserId && u.Role == "Klient");
                         if (firstClient == null) return Json(new { noClients = true });
                         targetClientId = firstClient.Id;
                     }
                     else if (User.IsInRole("Admin"))
                     {
-                        var firstClient = await _context.Users.FirstOrDefaultAsync(u => u.Rola == "Klient");
+                        var firstClient = await _context.Users.FirstOrDefaultAsync(u => u.Role == "Klient");
                         if (firstClient == null) return Json(new { noClients = true });
                         targetClientId = firstClient.Id;
                     }
@@ -122,25 +122,25 @@ namespace AplikacjaNaSiłownię.Controllers
             if (clientUser == null) return NotFound();
 
             // 1. ZLICZANIE STATYSTYK TRENINGOWYCH W BAZIE DANYCH (Szybkie zapytania COUNT w bazie):
-            
+
             // Łączna liczba wszystkich treningów (nieodwołanych i odwołanych) zapisanych dla tego klienta.
             var totalWorkouts = await _context.PlannedWorkouts.CountAsync(w => w.ClientId == targetClientId);
-            
+
             // Liczba treningów zrealizowanych: status inny niż odwołany oraz data zakończenia (lub rozpoczęcia) jest w przeszłości względem UTC.
-            var completedWorkouts = await _context.PlannedWorkouts.CountAsync(w => 
-                w.ClientId == targetClientId && 
-                w.Status != "Odwołany" && 
+            var completedWorkouts = await _context.PlannedWorkouts.CountAsync(w =>
+                w.ClientId == targetClientId &&
+                w.Status != "Odwołany" &&
                 (w.EndDate ?? w.StartDate) < TimeHelper.GetPolishTime());
 
             // Liczba treningów zaplanowanych w przyszłości (status "Zaplanowany" i data startu >= UTC).
-            var plannedWorkouts = await _context.PlannedWorkouts.CountAsync(w => 
-                w.ClientId == targetClientId && 
-                w.Status == "Zaplanowany" && 
+            var plannedWorkouts = await _context.PlannedWorkouts.CountAsync(w =>
+                w.ClientId == targetClientId &&
+                w.Status == "Zaplanowany" &&
                 (w.EndDate ?? w.StartDate) >= TimeHelper.GetPolishTime());
 
             // Liczba treningów odwołanych przez klienta lub trenera.
-            var cancelledWorkouts = await _context.PlannedWorkouts.CountAsync(w => 
-                w.ClientId == targetClientId && 
+            var cancelledWorkouts = await _context.PlannedWorkouts.CountAsync(w =>
+                w.ClientId == targetClientId &&
                 w.Status == "Odwołany");
 
             // 2. DANE DO WYKRESU AKTYWNOŚCI W CZASIE (W zależności od wybranego widoku: miesiąc, tydzień, dzień)
@@ -158,8 +158,8 @@ namespace AplikacjaNaSiłownię.Controllers
 
                 // Pobieramy daty zrealizowanych treningów klienta z bazy od wyznaczonej granicy
                 var workouts = await _context.PlannedWorkouts
-                    .Where(w => w.ClientId == targetClientId && 
-                                w.Status != "Odwołany" && 
+                    .Where(w => w.ClientId == targetClientId &&
+                                w.Status != "Odwołany" &&
                                 (w.EndDate ?? w.StartDate) < TimeHelper.GetPolishTime() &&
                                 w.StartDate >= sixWeeksAgo)
                     .Select(w => w.StartDate)
@@ -170,7 +170,7 @@ namespace AplikacjaNaSiłownię.Controllers
                 {
                     var weekStart = startOfCurrentWeek.AddDays(-i * 7);
                     var weekEnd = weekStart.AddDays(6);
-                    
+
                     // Piękne formatowanie przedziałów tygodniowych, np. "11.05 - 17.05"
                     var label = $"{weekStart:dd.MM} - {weekEnd:dd.MM}";
                     chartLabels.Add(label);
@@ -187,8 +187,8 @@ namespace AplikacjaNaSiłownię.Controllers
 
                 // Pobieramy daty zrealizowanych treningów
                 var workouts = await _context.PlannedWorkouts
-                    .Where(w => w.ClientId == targetClientId && 
-                                w.Status != "Odwołany" && 
+                    .Where(w => w.ClientId == targetClientId &&
+                                w.Status != "Odwołany" &&
                                 (w.EndDate ?? w.StartDate) < TimeHelper.GetPolishTime() &&
                                 w.StartDate >= sevenDaysAgo)
                     .Select(w => w.StartDate)
@@ -198,7 +198,7 @@ namespace AplikacjaNaSiłownię.Controllers
                 for (int i = 6; i >= 0; i--)
                 {
                     var day = TimeHelper.GetPolishTime().Date.AddDays(-i);
-                    
+
                     // Pobieramy trzyliterowy skrót nazwy dnia i formatujemy jako np. "Pn (11.05)"
                     var dayName = day.ToString("ddd", new System.Globalization.CultureInfo("pl-PL"));
                     var label = $"{char.ToUpper(dayName[0])}{dayName[1..]} ({day:dd.MM})";
@@ -213,11 +213,11 @@ namespace AplikacjaNaSiłownię.Controllers
             {
                 // Domyślny Widok Miesięczny (timeframe == "month"): Ostatnie 6 miesięcy
                 var sixMonthsAgo = TimeHelper.GetPolishTime().AddMonths(-5);
-                
+
                 // Pobieramy i agregujemy dane o zrealizowanych treningach bezpośrednio w bazie SQL
                 var monthlyData = await _context.PlannedWorkouts
-                    .Where(w => w.ClientId == targetClientId && 
-                                w.Status != "Odwołany" && 
+                    .Where(w => w.ClientId == targetClientId &&
+                                w.Status != "Odwołany" &&
                                 (w.EndDate ?? w.StartDate) < TimeHelper.GetPolishTime() &&
                                 w.StartDate >= new DateTime(sixMonthsAgo.Year, sixMonthsAgo.Month, 1))
                     .GroupBy(w => new { w.StartDate.Year, w.StartDate.Month })
@@ -244,7 +244,7 @@ namespace AplikacjaNaSiłownię.Controllers
             // Zwracamy obiekt JSON z wszystkimi obliczonymi statystykami gotowy do zmapowania w JS.
             return Json(new
             {
-                clientName = $"{clientUser.Imie} {clientUser.Nazwisko}",
+                clientName = $"{clientUser.FirstName} {clientUser.LastName}",
                 totalWorkouts,
                 completedWorkouts,
                 plannedWorkouts,
@@ -267,7 +267,7 @@ namespace AplikacjaNaSiłownię.Controllers
 
             // Pobieramy listę wszystkich aktywnych podopiecznych tego trenera.
             var activeClients = await _context.Users
-                .Where(u => u.TrenerId == userId && u.Rola == "Klient")
+                .Where(u => u.TrainerId == userId && u.Role == "Klient")
                 .ToListAsync();
 
             var totalClients = activeClients.Count;
@@ -294,19 +294,19 @@ namespace AplikacjaNaSiłownię.Controllers
 
             // Zliczamy łączne statystyki treningowe u wszystkich podopiecznych trenera razem wziętych.
             var totalWorkouts = await _context.PlannedWorkouts.CountAsync(w => clientIds.Contains(w.ClientId));
-            
-            var completedWorkouts = await _context.PlannedWorkouts.CountAsync(w => 
-                clientIds.Contains(w.ClientId) && 
-                w.Status != "Odwołany" && 
+
+            var completedWorkouts = await _context.PlannedWorkouts.CountAsync(w =>
+                clientIds.Contains(w.ClientId) &&
+                w.Status != "Odwołany" &&
                 (w.EndDate ?? w.StartDate) < TimeHelper.GetPolishTime());
 
-            var plannedWorkouts = await _context.PlannedWorkouts.CountAsync(w => 
-                clientIds.Contains(w.ClientId) && 
-                w.Status == "Zaplanowany" && 
+            var plannedWorkouts = await _context.PlannedWorkouts.CountAsync(w =>
+                clientIds.Contains(w.ClientId) &&
+                w.Status == "Zaplanowany" &&
                 (w.EndDate ?? w.StartDate) >= TimeHelper.GetPolishTime());
 
-            var cancelledWorkouts = await _context.PlannedWorkouts.CountAsync(w => 
-                clientIds.Contains(w.ClientId) && 
+            var cancelledWorkouts = await _context.PlannedWorkouts.CountAsync(w =>
+                clientIds.Contains(w.ClientId) &&
                 w.Status == "Odwołany");
 
             // 3. LOGIKA WYŁANIANIA NAJBARDZIEJ AKTYWNEGO KLIENTA (Lidera Aktywności):
@@ -329,15 +329,15 @@ namespace AplikacjaNaSiłownię.Controllers
                 var clientObj = activeClients.FirstOrDefault(c => c.Id == mostActiveClientData.ClientId);
                 if (clientObj != null)
                 {
-                    mostActiveClientName = $"{clientObj.Imie} {clientObj.Nazwisko} ({mostActiveClientData.Count} treningów)";
+                    mostActiveClientName = $"{clientObj.FirstName} {clientObj.LastName} ({mostActiveClientData.Count} treningów)";
                 }
             }
 
             // 4. PRZYGOTOWANIE DANYCH DO WYKRESU SŁUPKOWEGO (Aktywność poszczególnych klientów):
             // Pobieramy liczbę zrealizowanych treningów dla każdego klienta z osobna.
             var workoutsPerClient = await _context.PlannedWorkouts
-                .Where(w => clientIds.Contains(w.ClientId) && 
-                            w.Status != "Odwołany" && 
+                .Where(w => clientIds.Contains(w.ClientId) &&
+                            w.Status != "Odwołany" &&
                             (w.EndDate ?? w.StartDate) < TimeHelper.GetPolishTime())
                 .GroupBy(w => w.ClientId)
                 .Select(g => new
@@ -353,8 +353,8 @@ namespace AplikacjaNaSiłownię.Controllers
             // Mapujemy dane: każdy klient z listy aktywnych dostaje etykietę (imię nazwisko) oraz liczbę treningów.
             foreach (var client in activeClients)
             {
-                clientLabels.Add($"{client.Imie} {client.Nazwisko}");
-                
+                clientLabels.Add($"{client.FirstName} {client.LastName}");
+
                 var countObj = workoutsPerClient.FirstOrDefault(w => w.ClientId == client.Id);
                 clientWorkoutCounts.Add(countObj?.Count ?? 0);
             }

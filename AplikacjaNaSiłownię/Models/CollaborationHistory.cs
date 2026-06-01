@@ -8,17 +8,16 @@ namespace AplikacjaNaSiłownię.Models
         [Key]
         public int Id { get; set; }
 
-        [Required]
         [MaxLength(450)]
-        public string ClientId { get; set; } = string.Empty;
+        public string? ClientId { get; set; }
 
         [MaxLength(200)]
         public string ClientName { get; set; } = string.Empty;
 
         [MaxLength(450)]
-        public string TrenerId { get; set; } = string.Empty;
+        public string? TrainerId { get; set; }
         [MaxLength(200)]
-        public string TrenerName { get; set; } = string.Empty;
+        public string TrainerName { get; set; } = string.Empty;
 
         public DateTime EndDate { get; set; } = AplikacjaNaSiłownię.Helpers.TimeHelper.GetPolishTime();
 

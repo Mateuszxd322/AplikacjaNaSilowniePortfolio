@@ -13,60 +13,62 @@ namespace AplikacjaNaSiłownię.Services
     // Zastosowano Primary Constructor dla serwisów, co eliminuje zbędny kod konstruktora manualnego.
 
     public class UserService(
-        UserManager<ApplicationUser> userManager, 
+        UserManager<ApplicationUser> userManager,
         ApplicationDbContext context,
         ILogger<UserService> logger,
-        AplikacjaNaSiłownię.Services.INotificationService notificationService) : IUserService
+        AplikacjaNaSiłownię.Services.INotificationService notificationService,
+        Microsoft.AspNetCore.Hosting.IWebHostEnvironment webHostEnvironment) : IUserService
     {
         private readonly UserManager<ApplicationUser> _userManager = userManager;
         private readonly ApplicationDbContext _context = context;
         private readonly ILogger<UserService> _logger = logger;
         private readonly AplikacjaNaSiłownię.Services.INotificationService _notificationService = notificationService;
+        private readonly Microsoft.AspNetCore.Hosting.IWebHostEnvironment _webHostEnvironment = webHostEnvironment;
 
         public async Task<bool> DeleteUserAsync(string userId, string deletedByRole)
         {
             var user = await _userManager.FindByIdAsync(userId);
             if (user == null) return false;
 
-            // Zabezpieczenie przed usunięciem Admina
-            if (await _userManager.IsInRoleAsync(user, "Admin")) return false;
+            // Zabezpieczenie przed usunięciem Admina (błyskawiczne sprawdzenie właściwości w pamięci)
+            if (user.Role == "Admin") return false;
 
             // Uproszczone using - transakcja zostanie zakończona (Commit/Rollback) po wyjściu z zakresu metody
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
-                if (user.Rola == "Trener")
+                if (user.Role == "Trener")
                 {
-                    var clients = await _userManager.Users.Where(u => u.TrenerId == user.Id || u.PendingTrenerId == user.Id).ToListAsync();
+                    var clients = await _userManager.Users.Where(u => u.TrainerId == user.Id || u.PendingTrainerId == user.Id).ToListAsync();
                     foreach (var client in clients)
                     {
-                        if (client.TrenerId == user.Id)
+                        if (client.TrainerId == user.Id)
                         {
                             _context.CollaborationHistories.Add(new CollaborationHistory
                             {
                                 ClientId = client.Id,
-                                ClientName = $"{client.Imie} {client.Nazwisko}",
-                                TrenerId = user.Id,
-                                TrenerName = $"{user.Imie} {user.Nazwisko}",
+                                ClientName = $"{client.FirstName} {client.LastName}",
+                                TrainerId = user.Id,
+                                TrainerName = $"{user.FirstName} {user.LastName}",
                                 EndDate = TimeHelper.GetPolishTime(),
                                 EndedByRole = deletedByRole,
                                 Reason = "Konto trenera zostało usunięte z systemu."
                             });
-                            client.TrenerId = null;
+                            client.TrainerId = null;
                         }
-                        if (client.PendingTrenerId == user.Id) client.PendingTrenerId = null;
+                        if (client.PendingTrainerId == user.Id) client.PendingTrainerId = null;
                         await _userManager.UpdateAsync(client);
                     }
                 }
-                else if (user.Rola == "Klient" && !string.IsNullOrEmpty(user.TrenerId))
+                else if (user.Role == "Klient" && !string.IsNullOrEmpty(user.TrainerId))
                 {
-                    var trainer = await _userManager.FindByIdAsync(user.TrenerId);
+                    var trainer = await _userManager.FindByIdAsync(user.TrainerId);
                     _context.CollaborationHistories.Add(new CollaborationHistory
                     {
                         ClientId = user.Id,
-                        ClientName = $"{user.Imie} {user.Nazwisko}",
-                        TrenerId = user.TrenerId,
-                        TrenerName = trainer != null ? $"{trainer.Imie} {trainer.Nazwisko}" : "Usunięty Trener",
+                        ClientName = $"{user.FirstName} {user.LastName}",
+                        TrainerId = user.TrainerId,
+                        TrainerName = trainer != null ? $"{trainer.FirstName} {trainer.LastName}" : "Usunięty Trener",
                         EndDate = TimeHelper.GetPolishTime(),
                         EndedByRole = deletedByRole,
                         Reason = "Konto klienta zostało usunięte z systemu."
@@ -81,14 +83,35 @@ namespace AplikacjaNaSiłownię.Services
                     _context.PlannedWorkouts.RemoveRange(workouts);
                 }
 
-                // KROK: Usunięcie powiadomień powiązanych z użytkownikiem (Zapobieganie osieroconym rekordom).
-                // Ponieważ powiadomienia (Notifications) są powiązane z użytkownikiem za pomocą UserId typu string,
-                // a nie twardego klucza obcego EF z automatyczną kaskadą, ich nieusunięcie skutkowałoby
-                // powstawaniem osieroconych rekordów i zaśmiecaniem bazy danych po skasowaniu użytkownika.
-                var notifications = await _context.Notifications.Where(n => n.UserId == userId).ToListAsync();
-                if (notifications.Count > 0)
+                // KROK: Usunięcie fizycznego pliku zdjęcia profilowego z dysku serwera (zapobieganie zaśmiecaniu)
+                if (!string.IsNullOrEmpty(user.ProfilePicturesPath))
                 {
-                    _context.Notifications.RemoveRange(notifications);
+                    var filePath = System.IO.Path.Combine(_webHostEnvironment.WebRootPath, "uploads", "profiles", user.ProfilePicturesPath);
+                    if (System.IO.File.Exists(filePath))
+                    {
+                        System.IO.File.Delete(filePath);
+                    }
+                }
+
+                // KROK: Ręczne wyczyszczenie kluczy w historii współpracy (obejście ograniczeń cykliczności/kaskad SQL Server)
+                if (_context.Database.IsRelational())
+                {
+                    await _context.Database.ExecuteSqlRawAsync(
+                        "UPDATE CollaborationHistories SET ClientId = NULL WHERE ClientId = {0}", userId);
+                    await _context.Database.ExecuteSqlRawAsync(
+                        "UPDATE CollaborationHistories SET TrainerId = NULL WHERE TrainerId = {0}", userId);
+                }
+                else
+                {
+                    // Dla testów jednostkowych (InMemory), które nie wspierają surowego SQL, wykonujemy aktualizację w pamięci:
+                    var histories = await _context.CollaborationHistories
+                        .Where(h => h.ClientId == userId || h.TrainerId == userId)
+                        .ToListAsync();
+                    foreach (var history in histories)
+                    {
+                        if (history.ClientId == userId) history.ClientId = null;
+                        if (history.TrainerId == userId) history.TrainerId = null;
+                    }
                 }
 
                 await _context.SaveChangesAsync();
@@ -107,15 +130,11 @@ namespace AplikacjaNaSiłownię.Services
         public async Task<bool> ApproveTrainerAsync(string userId)
         {
             var user = await _userManager.FindByIdAsync(userId);
-            if (user != null && user.Rola == "Trener")
+            if (user != null && user.Role == "Trener")
             {
                 user.IsApproved = true;
-                if (!await _userManager.IsInRoleAsync(user, "Trener"))
-                {
-                    await _userManager.AddToRoleAsync(user, "Trener");
-                }
                 var result = await _userManager.UpdateAsync(user);
-                
+
                 if (result.Succeeded)
                 {
                     await _notificationService.SendNotificationAsync(
@@ -134,14 +153,8 @@ namespace AplikacjaNaSiłownię.Services
         public async Task<bool> RejectTrainerAsync(string userId)
         {
             var user = await _userManager.FindByIdAsync(userId);
-            if (user != null && user.Rola == "Trener" && !user.IsApproved)
+            if (user != null && user.Role == "Trener" && !user.IsApproved)
             {
-                // Synchronizacja ról: upewniamy się, że użytkownik nie ma roli trenera, jeśli został odrzucony.
-                if (await _userManager.IsInRoleAsync(user, "Trener"))
-                {
-                    await _userManager.RemoveFromRoleAsync(user, "Trener");
-                }
-
                 // W tym systemie odrzucenie prośby o bycie trenerem skutkuje usunięciem konta "kandydata".
                 var result = await _userManager.DeleteAsync(user);
                 return result.Succeeded;
@@ -154,18 +167,18 @@ namespace AplikacjaNaSiłownię.Services
             var user = await _userManager.FindByIdAsync(userId);
             if (user == null) return (false, "");
 
-            if (user.Rola == "Trener")
+            if (user.Role == "Trener")
             {
-                var clientCount = await _userManager.Users.CountAsync(u => u.TrenerId == userId || u.PendingTrenerId == userId);
+                var clientCount = await _userManager.Users.CountAsync(u => u.TrainerId == userId || u.PendingTrainerId == userId);
                 if (clientCount > 0)
                 {
                     return (true, $"Uwaga! Ten trener posiada obecnie {clientCount} przypisanych klientów. Usunięcie konta spowoduje natychmiastowe zerwanie tych współprac.");
                 }
             }
-            else if (user.Rola == "Klient" && !string.IsNullOrEmpty(user.TrenerId))
+            else if (user.Role == "Klient" && !string.IsNullOrEmpty(user.TrainerId))
             {
-                var trainer = await _userManager.FindByIdAsync(user.TrenerId);
-                string trainerName = trainer != null ? $"{trainer.Imie} {trainer.Nazwisko}" : "trenera";
+                var trainer = await _userManager.FindByIdAsync(user.TrainerId);
+                string trainerName = trainer != null ? $"{trainer.FirstName} {trainer.LastName}" : "trenera";
                 return (true, $"Uwaga! Ten klient jest obecnie przypisany do {trainerName}. Usunięcie konta spowoduje zerwanie tej współpracy.");
             }
 
@@ -191,15 +204,15 @@ namespace AplikacjaNaSiłownię.Services
         public async Task<bool> TerminateCollaborationAsync(string clientId, string reason, string endedByRole, string performingUserId)
         {
             var client = await _userManager.FindByIdAsync(clientId);
-            if (client == null || string.IsNullOrEmpty(client.TrenerId)) return false;
+            if (client == null || string.IsNullOrEmpty(client.TrainerId)) return false;
 
             // KROK 1: Weryfikacja uprawnień (Zabezpieczenie przed atakami IDOR).
             // Sprawdzamy, czy osoba żądająca zakończenia współpracy ma do tego prawo względem danego klienta.
-            if (endedByRole == "Trener" && client.TrenerId != performingUserId) return false;
+            if (endedByRole == "Trener" && client.TrainerId != performingUserId) return false;
             if (endedByRole == "Klient" && client.Id != performingUserId) return false;
             // Admin (Administrator) nie podlega tym restrykcjom.
 
-            var trainer = await _userManager.FindByIdAsync(client.TrenerId);
+            var trainer = await _userManager.FindByIdAsync(client.TrainerId);
 
             // KROK 2: Rozpoczęcie transakcji bazodanowej.
             // Transakcja gwarantuje atomowość operacji - albo oba kroki (historia i update) zostaną wykonane, albo żaden.
@@ -211,9 +224,9 @@ namespace AplikacjaNaSiłownię.Services
                 var historyRecord = new CollaborationHistory
                 {
                     ClientId = client.Id,
-                    ClientName = $"{client.Imie} {client.Nazwisko}",
-                    TrenerId = client.TrenerId,
-                    TrenerName = trainer != null ? $"{trainer.Imie} {trainer.Nazwisko}" : "Usunięty Trener",
+                    ClientName = $"{client.FirstName} {client.LastName}",
+                    TrainerId = client.TrainerId,
+                    TrainerName = trainer != null ? $"{trainer.FirstName} {trainer.LastName}" : "Usunięty Trener",
                     EndDate = TimeHelper.GetPolishTime(),
                     EndedByRole = endedByRole,
                     Reason = reason
@@ -221,7 +234,7 @@ namespace AplikacjaNaSiłownię.Services
                 _context.CollaborationHistories.Add(historyRecord);
 
                 // KROK 4: Aktualizacja danych użytkownika (odpięcie trenera).
-                client.TrenerId = null;
+                client.TrainerId = null;
                 var updateResult = await _userManager.UpdateAsync(client);
 
                 if (!updateResult.Succeeded) throw new Exception("Błąd podczas aktualizacji IdentityUser.");
@@ -239,7 +252,7 @@ namespace AplikacjaNaSiłownię.Services
                     await _notificationService.SendNotificationAsync(
                         client.Id,
                         "Koniec współpracy",
-                        $"Trener {trainer?.Imie} {trainer?.Nazwisko} zakończył współpracę z Tobą. Powód: {reason}",
+                        $"Trener {trainer?.FirstName} {trainer?.LastName} zakończył współpracę z Tobą. Powód: {reason}",
                         "KoniecWspolpracy"
                     );
                 }
@@ -250,7 +263,7 @@ namespace AplikacjaNaSiłownię.Services
                         await _notificationService.SendNotificationAsync(
                             trainer.Id,
                             "Koniec współpracy",
-                            $"Klient {client.Imie} {client.Nazwisko} zakończył współpracę z Tobą. Powód: {reason}",
+                            $"Klient {client.FirstName} {client.LastName} zakończył współpracę z Tobą. Powód: {reason}",
                             "KoniecWspolpracy"
                         );
                     }
@@ -268,7 +281,7 @@ namespace AplikacjaNaSiłownię.Services
                         await _notificationService.SendNotificationAsync(
                             trainer.Id,
                             "Koniec współpracy",
-                            $"Administrator zakończył współpracę między Tobą a klientem {client.Imie} {client.Nazwisko}. Powód: {reason}",
+                            $"Administrator zakończył współpracę między Tobą a klientem {client.FirstName} {client.LastName}. Powód: {reason}",
                             "KoniecWspolpracy"
                         );
                     }
@@ -305,10 +318,10 @@ namespace AplikacjaNaSiłownię.Services
                 var buffer = new byte[4];
                 int bytesRead = await stream.ReadAsync(buffer.AsMemory(0, 4));
                 if (bytesRead < 3) return false; // JPEG wymaga min. 3 bajtów, PNG min. 4 bajtów
-                
+
                 bool isPng = bytesRead == 4 && buffer[0] == 0x89 && buffer[1] == 0x50 && buffer[2] == 0x4E && buffer[3] == 0x47;
                 bool isJpeg = bytesRead >= 3 && buffer[0] == 0xFF && buffer[1] == 0xD8 && buffer[2] == 0xFF;
-                
+
                 if (!isPng && !isJpeg) return false;
             }
 

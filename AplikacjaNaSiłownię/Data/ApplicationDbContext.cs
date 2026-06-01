@@ -21,12 +21,12 @@ namespace AplikacjaNaSiłownię.Data
             builder.Entity<ApplicationUser>()
                 .HasOne<ApplicationUser>()
                 .WithMany()
-                .HasForeignKey(u => u.TrenerId)
+                .HasForeignKey(u => u.TrainerId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             // Indeks optymalizujący wyszukiwanie klientów dla konkretnego trenera
             builder.Entity<ApplicationUser>()
-                .HasIndex(u => u.TrenerId);
+                .HasIndex(u => u.TrainerId);
 
             // Indeks optymalizujący pobieranie treningów dla konkretnego klienta
             builder.Entity<PlannedWorkout>()
@@ -41,12 +41,32 @@ namespace AplikacjaNaSiłownię.Data
                 .HasIndex(h => h.ClientId);
 
             builder.Entity<CollaborationHistory>()
-                .HasIndex(h => h.TrenerId);
+                .HasIndex(h => h.TrainerId);
+
+            // Twarde klucze obce dla historii współpracy z regułą Restrict w celu uniknięcia cykli w SQL Server
+            builder.Entity<CollaborationHistory>()
+                .HasOne<ApplicationUser>()
+                .WithMany()
+                .HasForeignKey(h => h.ClientId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<CollaborationHistory>()
+                .HasOne<ApplicationUser>()
+                .WithMany()
+                .HasForeignKey(h => h.TrainerId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             // Złożony indeks optymalizujący pobieranie i sortowanie nieprzeczytanych powiadomień 
             // dla dzwoneczka powiadomień użytkownika (najnowsze u góry).
             builder.Entity<Notification>()
                 .HasIndex(n => new { n.UserId, n.IsRead, n.CreatedAt });
+
+            // Twardy klucz obcy dla powiadomień z automatycznym czyszczeniem kaskadowym (CASCADE)
+            builder.Entity<Notification>()
+                .HasOne<ApplicationUser>()
+                .WithMany()
+                .HasForeignKey(n => n.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

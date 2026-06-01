@@ -184,7 +184,7 @@
                                     {
                                         <i class="bi bi-person-circle me-2" style="font-size: 1.5rem;"></i>
                                     }
-                                    Witaj, @(User.IsInRole("Admin") ? "Adminie" : (currentUser?.Imie ??
+                                    Witaj, @(User.IsInRole("Admin") ? "Adminie" : (currentUser?.FirstName ??
                                  User.Identity.Name))!
                                 </a>
                                 <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark gym-card border-secondary">

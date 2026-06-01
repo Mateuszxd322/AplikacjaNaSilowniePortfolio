@@ -30,7 +30,7 @@
                         <i class="bi bi-person-badge-fill"></i>
                     </div>
                     <div class="col">
-                        <h3 class="text-white mb-2">@Model.Imie @Model.Nazwisko</h3>
+                        <h3 class="text-white mb-2">@Model.FirstName @Model.LastName</h3>
                         <p class="text-muted mb-1"><i class="bi bi-envelope me-2"></i> @Model.Email</p>
                         @if (!string.IsNullOrEmpty(Model.PhoneNumber))
                         {
@@ -63,7 +63,7 @@
                 <div class="card gym-card border-0 bg-dark shadow-sm">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-center mb-2">
-                            <h5 class="text-white mb-0">Trener: @record.TrenerName</h5>
+                            <h5 class="text-white mb-0">Trener: @record.TrainerName</h5>
                             <div>
                                 <span class="badge bg-secondary me-2">Zakończono: @record.EndDate.ToString("dd.MM.yyyy HH:mm")</span>
                                 <button type="button" class="btn btn-outline-danger btn-sm border-0 btn-delete-history" data-id="@record.Id" title="Usuń z historii">

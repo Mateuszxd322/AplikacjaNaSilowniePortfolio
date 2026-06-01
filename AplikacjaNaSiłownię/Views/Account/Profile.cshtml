@@ -9,7 +9,7 @@
 
 
 
-    ViewData["BodyClass"] = Model.Rola == "Admin" ? "bg-admin-panel" : (Model.Rola == "Trener" ? "bg-app-general" :
+    ViewData["BodyClass"] = Model.Role == "Admin" ? "bg-admin-panel" : (Model.Role == "Trener" ? "bg-app-general" :
 
     "bg-calendar-view");
 }
@@ -59,7 +59,7 @@
                         </div>
                     </div>
 
-                    <h3 class="text-white fw-bold mb-1">@Model.Imie @Model.Nazwisko</h3>
+                    <h3 class="text-white fw-bold mb-1">@Model.FirstName @Model.LastName</h3>
                     <p class="text-muted mb-0">@Model.Email</p>
 
                     <!-- Ukryty formularz do przesyłania zdjęcia -->
@@ -78,7 +78,7 @@
             <div class="row mb-3">
                 <div class="col-sm-4 text-white-50">Rola w systemie:</div>
                 <div class="col-sm-8 text-white fw-bold">
-                    @if (Model.Rola == "Admin")
+                    @if (Model.Role == "Admin")
 
 
 
@@ -88,7 +88,7 @@
 
 
 
-                    else if (Model.Rola == "Trener")
+                    else if (Model.Role == "Trener")
 
 
 
@@ -111,7 +111,7 @@
             <div class="row mb-3">
                 <div class="col-sm-4 text-white-50">Status konta:</div>
                 <div class="col-sm-8 text-white fw-bold">
-                    @if (Model.IsApproved || Model.Rola != "Trener")
+                    @if (Model.IsApproved || Model.Role != "Trener")
 
 
 
@@ -131,13 +131,13 @@
                 </div>
             </div>
 
-            @if (Model.Rola == "Klient")
+            @if (Model.Role == "Klient")
 
             {
                 <div class="row mb-3">
                     <div class="col-sm-4 text-white-50">Twój Trener:</div>
                     <div class="col-sm-8 text-white fw-bold">
-                        @if (!string.IsNullOrEmpty(Model.TrenerId) && ViewBag.TrenerName != null)
+                        @if (!string.IsNullOrEmpty(Model.TrainerId) && ViewBag.TrenerName != null)
 
 
 
@@ -158,7 +158,7 @@
                 </div>
             }
 
-            @if (Model.Rola != "Admin")
+            @if (Model.Role != "Admin")
 
             {
                 @* Flexbox (d-flex) zapewnia idealne wyrównanie przycisków w pionie i poziomie *@

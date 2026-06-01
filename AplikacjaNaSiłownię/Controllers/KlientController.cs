@@ -10,8 +10,8 @@ namespace AplikacjaNaSiłownię.Controllers
     [Authorize(Roles = "Klient")]
     // Wykorzystujemy Primary Constructor (C# 12) do wstrzykiwania zależności.
     public class KlientController(
-        ApplicationDbContext context, 
-        UserManager<ApplicationUser> userManager, 
+        ApplicationDbContext context,
+        UserManager<ApplicationUser> userManager,
         Services.IWorkoutService workoutService,
         Services.IUserService userService,
         Services.INotificationService notificationService) : Controller
@@ -34,14 +34,14 @@ namespace AplikacjaNaSiłownię.Controllers
             if (user == null) return NotFound();
 
             ApplicationUser? pendingTrener = null;
-            if (!string.IsNullOrEmpty(user.PendingTrenerId))
+            if (!string.IsNullOrEmpty(user.PendingTrainerId))
             {
-                pendingTrener = await _userManager.FindByIdAsync(user.PendingTrenerId);
+                pendingTrener = await _userManager.FindByIdAsync(user.PendingTrainerId);
 
                 // Self-healing: Jeśli trener, który wysłał zaproszenie, został usunięty z bazy
                 if (pendingTrener == null)
                 {
-                    user.PendingTrenerId = null;
+                    user.PendingTrainerId = null;
                     await _userManager.UpdateAsync(user);
                 }
             }
@@ -55,31 +55,31 @@ namespace AplikacjaNaSiłownię.Controllers
         {
             // 1. Pobieramy pełne dane zalogowanego klienta
             var user = await _userManager.GetUserAsync(User);
-            
+
             // 2. Warunek: Upewniamy się, że klient istnieje i rzeczywiście ma zaproszenie oczekujące na akceptację (PendingTrenerId nie jest puste)
-            if (user != null && !string.IsNullOrEmpty(user.PendingTrenerId))
+            if (user != null && !string.IsNullOrEmpty(user.PendingTrainerId))
             {
                 // 3. Przypisujemy trenera: Ustawiamy stałe pole 'TrenerId' na ID trenera, który wysłał zaproszenie
-                user.TrenerId = user.PendingTrenerId;
-                
+                user.TrainerId = user.PendingTrainerId;
+
                 // 4. Czyścimy pole zaproszenia (ustawiamy PendingTrenerId na null), ponieważ zaproszenie zostało pomyślnie zrealizowane
-                user.PendingTrenerId = null;
-                
+                user.PendingTrainerId = null;
+
                 // 5. Zapisujemy zmiany w bazie danych
                 await _userManager.UpdateAsync(user);
 
                 // 6. Wysyłamy powiadomienie do trenera, żeby dowiedział się na żywo, że klient zaakceptował jego zaproszenie
-                if (!string.IsNullOrEmpty(user.TrenerId))
+                if (!string.IsNullOrEmpty(user.TrainerId))
                 {
                     await _notificationService.SendNotificationAsync(
-                        user.TrenerId,
+                        user.TrainerId,
                         "Zaproszenie zaakceptowane!",
-                        $"Klient {user.Imie} {user.Nazwisko} zaakceptował Twoje zaproszenie do współpracy. Od teraz możecie razem planować treningi!",
+                        $"Klient {user.FirstName} {user.LastName} zaakceptował Twoje zaproszenie do współpracy. Od teraz możecie razem planować treningi!",
                         "Zaproszenie"
                     );
                 }
             }
-            
+
             // 7. Przekierowujemy klienta z powrotem do widoku listy zaproszeń
             return RedirectToAction("Requests");
         }
@@ -90,16 +90,16 @@ namespace AplikacjaNaSiłownię.Controllers
         {
             // 1. Pobieramy pełne dane zalogowanego klienta
             var user = await _userManager.GetUserAsync(User);
-            
+
             // 2. Warunek: Upewniamy się, że klient istnieje i rzeczywiście ma oczekujące zaproszenie
-            if (user != null && !string.IsNullOrEmpty(user.PendingTrenerId))
+            if (user != null && !string.IsNullOrEmpty(user.PendingTrainerId))
             {
                 // 3. BEZPIECZEŃSTWO: Zapamiętujemy ID trenera przed usunięciem (ponieważ zaraz ustawimy je na null, a potrzebujemy go do wysłania powiadomienia!)
-                var pendingTrenerId = user.PendingTrenerId;
-                
+                var pendingTrenerId = user.PendingTrainerId;
+
                 // 4. Anulujemy zaproszenie – ustawiamy PendingTrenerId na null
-                user.PendingTrenerId = null;
-                
+                user.PendingTrainerId = null;
+
                 // 5. Zapisujemy zmiany w bazie danych
                 await _userManager.UpdateAsync(user);
 
@@ -107,7 +107,7 @@ namespace AplikacjaNaSiłownię.Controllers
                 await _notificationService.SendNotificationAsync(
                     pendingTrenerId,
                     "Zaproszenie odrzucone",
-                    $"Klient {user.Imie} {user.Nazwisko} odrzucił Twoje zaproszenie do współpracy.",
+                    $"Klient {user.FirstName} {user.LastName} odrzucił Twoje zaproszenie do współpracy.",
                     "Zaproszenie"
                 );
             }
@@ -121,15 +121,15 @@ namespace AplikacjaNaSiłownię.Controllers
             if (user == null) return NotFound();
 
             ApplicationUser? currentTrainer = null;
-            if (!string.IsNullOrEmpty(user.TrenerId))
+            if (!string.IsNullOrEmpty(user.TrainerId))
             {
-                currentTrainer = await _userManager.FindByIdAsync(user.TrenerId);
-                
+                currentTrainer = await _userManager.FindByIdAsync(user.TrainerId);
+
                 // SELF-HEALING (Naprawa Punktu 3 Audytu 2.0): 
                 // Jeśli trener został usunięty z systemu, odpinamy go automatycznie u klienta.
                 if (currentTrainer == null)
                 {
-                    user.TrenerId = null;
+                    user.TrainerId = null;
                     await _userManager.UpdateAsync(user);
                 }
             }
@@ -180,7 +180,7 @@ namespace AplikacjaNaSiłownię.Controllers
             // LOGIKA ELASTYCZNA (UX): Zezwalamy klientowi na brak podania powodu w oknie dialogowym.
             // Zamiast odrzucać całą operację z kodem HTTP 400 Bad Request, ustawiamy elegancką wartość domyślną.
             var reason = string.IsNullOrWhiteSpace(request?.Reason) ? "Brak podanego powodu." : request.Reason;
-            
+
             // OCHRONA BAZY DANYCH: Jeśli powód jest zbyt długi (np. powyżej 500 znaków), przycinamy go.
             // Stosujemy zalecaną przez nowsze standardy C# składnię zakresu (Range Operator) `[..500]` zamiast klasycznego Substring.
             if (reason.Length > 500)
@@ -189,14 +189,14 @@ namespace AplikacjaNaSiłownię.Controllers
             }
 
             var user = await _userManager.GetUserAsync(User);
-            if (user == null || string.IsNullOrEmpty(user.TrenerId))
+            if (user == null || string.IsNullOrEmpty(user.TrainerId))
             {
                 return Json(new { success = false, message = "Błąd. Nie masz przypisanego trenera." });
             }
 
             // Wywołujemy bezpieczną metodę z serwisu (z obsługą transakcji i weryfikacją klienta - ochrona IDOR)
             var success = await _userService.TerminateCollaborationAsync(user.Id, reason, "Klient", user.Id);
-            
+
             if (success) return Json(new { success = true });
 
             return Json(new { success = false, message = "Wystąpił błąd podczas kończenia współpracy." });

@@ -41,7 +41,7 @@ namespace AplikacjaNaSiłownię.Migrations
                     b.Property<bool>("EmailConfirmed")
                         .HasColumnType("bit");
 
-                    b.Property<string>("Imie")
+                    b.Property<string>("FirstName")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
@@ -49,16 +49,16 @@ namespace AplikacjaNaSiłownię.Migrations
                     b.Property<bool>("IsApproved")
                         .HasColumnType("bit");
 
+                    b.Property<string>("LastName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("bit");
 
                     b.Property<DateTimeOffset?>("LockoutEnd")
                         .HasColumnType("datetimeoffset");
-
-                    b.Property<string>("Nazwisko")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("NormalizedEmail")
                         .HasMaxLength(256)
@@ -71,7 +71,7 @@ namespace AplikacjaNaSiłownię.Migrations
                     b.Property<string>("PasswordHash")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("PendingTrenerId")
+                    b.Property<string>("PendingTrainerId")
                         .HasMaxLength(450)
                         .HasColumnType("nvarchar(450)");
 
@@ -85,7 +85,7 @@ namespace AplikacjaNaSiłownię.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
-                    b.Property<string>("Rola")
+                    b.Property<string>("Role")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
@@ -93,7 +93,7 @@ namespace AplikacjaNaSiłownię.Migrations
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("TrenerId")
+                    b.Property<string>("TrainerId")
                         .HasMaxLength(450)
                         .HasColumnType("nvarchar(450)");
 
@@ -114,7 +114,7 @@ namespace AplikacjaNaSiłownię.Migrations
                         .HasDatabaseName("UserNameIndex")
                         .HasFilter("[NormalizedUserName] IS NOT NULL");
 
-                    b.HasIndex("TrenerId");
+                    b.HasIndex("TrainerId");
 
                     b.ToTable("AspNetUsers", (string)null);
                 });
@@ -128,7 +128,6 @@ namespace AplikacjaNaSiłownię.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("ClientId")
-                        .IsRequired()
                         .HasMaxLength(450)
                         .HasColumnType("nvarchar(450)");
 
@@ -156,12 +155,11 @@ namespace AplikacjaNaSiłownię.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
-                    b.Property<string>("TrenerId")
-                        .IsRequired()
+                    b.Property<string>("TrainerId")
                         .HasMaxLength(450)
                         .HasColumnType("nvarchar(450)");
 
-                    b.Property<string>("TrenerName")
+                    b.Property<string>("TrainerName")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
@@ -170,7 +168,7 @@ namespace AplikacjaNaSiłownię.Migrations
 
                     b.HasIndex("ClientId");
 
-                    b.HasIndex("TrenerId");
+                    b.HasIndex("TrainerId");
 
                     b.ToTable("CollaborationHistories");
                 });
@@ -396,8 +394,30 @@ namespace AplikacjaNaSiłownię.Migrations
                 {
                     b.HasOne("AplikacjaNaSiłownię.Models.ApplicationUser", null)
                         .WithMany()
-                        .HasForeignKey("TrenerId")
+                        .HasForeignKey("TrainerId")
                         .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("AplikacjaNaSiłownię.Models.CollaborationHistory", b =>
+                {
+                    b.HasOne("AplikacjaNaSiłownię.Models.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("ClientId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("AplikacjaNaSiłownię.Models.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("TrainerId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("AplikacjaNaSiłownię.Models.Notification", b =>
+                {
+                    b.HasOne("AplikacjaNaSiłownię.Models.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("AplikacjaNaSiłownię.Models.PlannedWorkout", b =>

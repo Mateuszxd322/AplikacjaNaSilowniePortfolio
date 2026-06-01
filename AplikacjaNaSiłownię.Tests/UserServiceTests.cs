@@ -40,6 +40,18 @@ namespace AplikacjaNaSiłownię.Tests
                 store.Object, null!, null!, null!, null!, null!, null!, null!, null!);
         }
 
+        private static UserService CreateUserService(
+            UserManager<ApplicationUser> userManager,
+            ApplicationDbContext db,
+            INotificationService? notificationService = null,
+            Microsoft.AspNetCore.Hosting.IWebHostEnvironment? webHostEnvironment = null)
+        {
+            var loggerMock = new Mock<Microsoft.Extensions.Logging.ILogger<UserService>>();
+            var notificationMock = notificationService ?? new Mock<INotificationService>().Object;
+            var webHostEnvMock = webHostEnvironment ?? new Mock<Microsoft.AspNetCore.Hosting.IWebHostEnvironment>().Object;
+            return new UserService(userManager, db, loggerMock.Object, notificationMock, webHostEnvMock);
+        }
+
         [Fact]
         public async Task TerminateCollaboration_ValidRequest_CreatesHistoryAndClearsId()
         {
@@ -47,22 +59,22 @@ namespace AplikacjaNaSiłownię.Tests
             var db = GetInMemoryDbContext();
             var userManagerMock = MockUserManager();
 
-            var client = new ApplicationUser { Id = "client-1", TrenerId = "trainer-1", Imie = "Jan", Nazwisko = "Kowalski" };
-            var trainer = new ApplicationUser { Id = "trainer-1", Imie = "Adam", Nazwisko = "Trener" };
+            var client = new ApplicationUser { Id = "client-1", TrainerId = "trainer-1", FirstName = "Jan", LastName = "Kowalski" };
+            var trainer = new ApplicationUser { Id = "trainer-1", FirstName = "Adam", LastName = "Trener" };
 
             // Ustawiamy co mają zwracać metody udawanego UserManager
             userManagerMock.Setup(m => m.FindByIdAsync("client-1")).ReturnsAsync(client);
             userManagerMock.Setup(m => m.FindByIdAsync("trainer-1")).ReturnsAsync(trainer);
             userManagerMock.Setup(m => m.UpdateAsync(It.IsAny<ApplicationUser>())).ReturnsAsync(IdentityResult.Success);
 
-            var service = new UserService(userManagerMock.Object, db, new Mock<Microsoft.Extensions.Logging.ILogger<UserService>>().Object, new Mock<INotificationService>().Object);
+            var service = CreateUserService(userManagerMock.Object, db);
 
             // --- ACT ---
             var result = await service.TerminateCollaborationAsync("client-1", "Koniec współpracy", "Trener", "trainer-1");
 
             // --- ASSERT ---
             Assert.True(result);
-            Assert.Null(client.TrenerId); // Relacja powinna zostać zerwana
+            Assert.Null(client.TrainerId); // Relacja powinna zostać zerwana
             Assert.Equal(1, await db.CollaborationHistories.CountAsync(TestContext.Current.CancellationToken)); // Powinien powstać ślad w historii (audit log)
             
             var history = await db.CollaborationHistories.FirstAsync(TestContext.Current.CancellationToken);
@@ -78,10 +90,10 @@ namespace AplikacjaNaSiłownię.Tests
             var userManagerMock = MockUserManager();
 
             // Klient należy do Trenera-1
-            var client = new ApplicationUser { Id = "client-1", TrenerId = "trainer-1" };
+            var client = new ApplicationUser { Id = "client-1", TrainerId = "trainer-1" };
             userManagerMock.Setup(m => m.FindByIdAsync("client-1")).ReturnsAsync(client);
 
-            var service = new UserService(userManagerMock.Object, db, new Mock<Microsoft.Extensions.Logging.ILogger<UserService>>().Object, new Mock<INotificationService>().Object);
+            var service = CreateUserService(userManagerMock.Object, db);
 
             // --- ACT ---
             // "Zły" trener próbuje odłączyć klienta innego trenera (próba ataku IDOR)
@@ -89,7 +101,7 @@ namespace AplikacjaNaSiłownię.Tests
 
             // --- ASSERT ---
             Assert.False(result); // System powinien zablokować nieautoryzowaną akcję
-            Assert.Equal("trainer-1", client.TrenerId); // Relacja musi pozostać nienaruszona
+            Assert.Equal("trainer-1", client.TrainerId); // Relacja musi pozostać nienaruszona
         }
 
         [Fact]
@@ -98,12 +110,12 @@ namespace AplikacjaNaSiłownię.Tests
             // --- ARRANGE ---
             var db = GetInMemoryDbContext();
             var userManagerMock = MockUserManager();
-            var adminUser = new ApplicationUser { Id = "admin-id", Rola = "Admin" };
+            var adminUser = new ApplicationUser { Id = "admin-id", Role = "Admin" };
 
             userManagerMock.Setup(m => m.FindByIdAsync("admin-id")).ReturnsAsync(adminUser);
             userManagerMock.Setup(m => m.IsInRoleAsync(adminUser, "Admin")).ReturnsAsync(true);
 
-            var service = new UserService(userManagerMock.Object, db, new Mock<Microsoft.Extensions.Logging.ILogger<UserService>>().Object, new Mock<INotificationService>().Object);
+            var service = CreateUserService(userManagerMock.Object, db);
 
             // --- ACT ---
             var result = await service.DeleteUserAsync("admin-id", "Admin");
@@ -115,19 +127,17 @@ namespace AplikacjaNaSiłownię.Tests
         }
 
         [Fact]
-        public async Task ApproveTrainer_ValidId_SetsIsApprovedAndRole()
+        public async Task ApproveTrainer_ValidId_SetsIsApproved()
         {
             // --- ARRANGE ---
             var db = GetInMemoryDbContext();
             var userManagerMock = MockUserManager();
-            var trainer = new ApplicationUser { Id = "trainer-id", Rola = "Trener", IsApproved = false };
+            var trainer = new ApplicationUser { Id = "trainer-id", Role = "Trener", IsApproved = false };
 
             userManagerMock.Setup(m => m.FindByIdAsync("trainer-id")).ReturnsAsync(trainer);
-            userManagerMock.Setup(m => m.IsInRoleAsync(trainer, "Trener")).ReturnsAsync(false);
-            userManagerMock.Setup(m => m.AddToRoleAsync(trainer, "Trener")).ReturnsAsync(IdentityResult.Success);
             userManagerMock.Setup(m => m.UpdateAsync(trainer)).ReturnsAsync(IdentityResult.Success);
 
-            var service = new UserService(userManagerMock.Object, db, new Mock<Microsoft.Extensions.Logging.ILogger<UserService>>().Object, new Mock<INotificationService>().Object);
+            var service = CreateUserService(userManagerMock.Object, db);
 
             // --- ACT ---
             var result = await service.ApproveTrainerAsync("trainer-id");
@@ -135,31 +145,26 @@ namespace AplikacjaNaSiłownię.Tests
             // --- ASSERT ---
             Assert.True(result);
             Assert.True(trainer.IsApproved); // Flaga zatwierdzenia powinna być na true
-            // Sprawdzamy czy rola została poprawnie nadana w systemie Identity
-            userManagerMock.Verify(m => m.AddToRoleAsync(trainer, "Trener"), Times.Once);
         }
 
         [Fact]
-        public async Task RejectTrainer_ValidId_RemovesRoleAndDeletesUser()
+        public async Task RejectTrainer_ValidId_DeletesUser()
         {
             // --- ARRANGE ---
             var db = GetInMemoryDbContext();
             var userManagerMock = MockUserManager();
-            var trainer = new ApplicationUser { Id = "trainer-candidate", Rola = "Trener", IsApproved = false };
+            var trainer = new ApplicationUser { Id = "trainer-candidate", Role = "Trener", IsApproved = false };
 
             userManagerMock.Setup(m => m.FindByIdAsync("trainer-candidate")).ReturnsAsync(trainer);
-            userManagerMock.Setup(m => m.IsInRoleAsync(trainer, "Trener")).ReturnsAsync(true);
-            userManagerMock.Setup(m => m.RemoveFromRoleAsync(trainer, "Trener")).ReturnsAsync(IdentityResult.Success);
             userManagerMock.Setup(m => m.DeleteAsync(trainer)).ReturnsAsync(IdentityResult.Success);
 
-            var service = new UserService(userManagerMock.Object, db, new Mock<Microsoft.Extensions.Logging.ILogger<UserService>>().Object, new Mock<INotificationService>().Object);
+            var service = CreateUserService(userManagerMock.Object, db);
 
             // --- ACT ---
             var result = await service.RejectTrainerAsync("trainer-candidate");
 
             // --- ASSERT ---
             Assert.True(result);
-            userManagerMock.Verify(m => m.RemoveFromRoleAsync(trainer, "Trener"), Times.Once);
             userManagerMock.Verify(m => m.DeleteAsync(trainer), Times.Once);
         }
 
@@ -170,9 +175,9 @@ namespace AplikacjaNaSiłownię.Tests
             var db = GetInMemoryDbContext();
             var userManagerMock = MockUserManager();
 
-            var trainer = new ApplicationUser { Id = "trainer-1", Rola = "Trener", Imie = "Adam", Nazwisko = "Trener" };
-            var client1 = new ApplicationUser { Id = "client-1", TrenerId = "trainer-1", Imie = "Jan", Nazwisko = "Kowalski", Rola = "Klient" };
-            var client2 = new ApplicationUser { Id = "client-2", PendingTrenerId = "trainer-1", Imie = "Ola", Nazwisko = "Nowak", Rola = "Klient" };
+            var trainer = new ApplicationUser { Id = "trainer-1", Role = "Trener", FirstName = "Adam", LastName = "Trener" };
+            var client1 = new ApplicationUser { Id = "client-1", TrainerId = "trainer-1", FirstName = "Jan", LastName = "Kowalski", Role = "Klient" };
+            var client2 = new ApplicationUser { Id = "client-2", PendingTrainerId = "trainer-1", FirstName = "Ola", LastName = "Nowak", Role = "Klient" };
 
             // Dodajemy użytkowników bezpośrednio do bazy InMemory, dzięki czemu db.Users posłuży jako działający IQueryable z obsługą IAsyncQueryable
             db.Users.Add(client1);
@@ -191,15 +196,15 @@ namespace AplikacjaNaSiłownię.Tests
             db.PlannedWorkouts.Add(new PlannedWorkout { Id = 102, ClientId = "client-1", StartDate = DateTime.UtcNow.AddDays(2) });
             await db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
-            var service = new UserService(userManagerMock.Object, db, new Mock<Microsoft.Extensions.Logging.ILogger<UserService>>().Object, new Mock<INotificationService>().Object);
+            var service = CreateUserService(userManagerMock.Object, db);
 
             // --- ACT ---
             var result = await service.DeleteUserAsync("trainer-1", "Admin");
 
             // --- ASSERT ---
             Assert.True(result);
-            Assert.Null(client1.TrenerId); // Relacja powinna zostać zerwana
-            Assert.Null(client2.PendingTrenerId); // Pending również wyczyszczone
+            Assert.Null(client1.TrainerId); // Relacja powinna zostać zerwana
+            Assert.Null(client2.PendingTrainerId); // Pending również wyczyszczone
             
             // Powinien powstać 1 rekord w historii (dla client1, bo był aktywnym klientem)
             Assert.Equal(1, await db.CollaborationHistories.CountAsync(TestContext.Current.CancellationToken));
@@ -218,8 +223,8 @@ namespace AplikacjaNaSiłownię.Tests
             var db = GetInMemoryDbContext();
             var userManagerMock = MockUserManager();
 
-            var client = new ApplicationUser { Id = "client-1", TrenerId = "trainer-1", Imie = "Jan", Nazwisko = "Kowalski", Rola = "Klient" };
-            var trainer = new ApplicationUser { Id = "trainer-1", Imie = "Adam", Nazwisko = "Trener", Rola = "Trener" };
+            var client = new ApplicationUser { Id = "client-1", TrainerId = "trainer-1", FirstName = "Jan", LastName = "Kowalski", Role = "Klient" };
+            var trainer = new ApplicationUser { Id = "trainer-1", FirstName = "Adam", LastName = "Trener", Role = "Trener" };
 
             userManagerMock.Setup(m => m.FindByIdAsync("client-1")).ReturnsAsync(client);
             userManagerMock.Setup(m => m.FindByIdAsync("trainer-1")).ReturnsAsync(trainer);
@@ -230,7 +235,7 @@ namespace AplikacjaNaSiłownię.Tests
             db.PlannedWorkouts.Add(new PlannedWorkout { Id = 201, ClientId = "client-1", StartDate = DateTime.UtcNow.AddDays(1) });
             await db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
-            var service = new UserService(userManagerMock.Object, db, new Mock<Microsoft.Extensions.Logging.ILogger<UserService>>().Object, new Mock<INotificationService>().Object);
+            var service = CreateUserService(userManagerMock.Object, db);
 
             // --- ACT ---
             var result = await service.DeleteUserAsync("client-1", "Admin");
@@ -253,7 +258,7 @@ namespace AplikacjaNaSiłownię.Tests
             // --- ARRANGE ---
             var db = GetInMemoryDbContext();
             var userManagerMock = MockUserManager();
-            var user = new ApplicationUser { Id = "user-1", Imie = "Jan", Nazwisko = "Kowalski" };
+            var user = new ApplicationUser { Id = "user-1", FirstName = "Jan", LastName = "Kowalski" };
 
             userManagerMock.Setup(m => m.FindByIdAsync("user-1")).ReturnsAsync(user);
             userManagerMock.Setup(m => m.UpdateAsync(user)).ReturnsAsync(IdentityResult.Success);
@@ -270,7 +275,7 @@ namespace AplikacjaNaSiłownię.Tests
                     .Callback<Stream, CancellationToken>((stream, token) => stream.Write(pngBytes, 0, pngBytes.Length))
                     .Returns(Task.CompletedTask);
 
-            var service = new UserService(userManagerMock.Object, db, new Mock<Microsoft.Extensions.Logging.ILogger<UserService>>().Object, new Mock<INotificationService>().Object);
+            var service = CreateUserService(userManagerMock.Object, db);
 
             try
             {
@@ -308,7 +313,7 @@ namespace AplikacjaNaSiłownię.Tests
             var fileMock = new Mock<Microsoft.AspNetCore.Http.IFormFile>();
             fileMock.Setup(_ => _.Length).Returns(3 * 1024 * 1024); // 3MB (Przekracza limit 2MB)
 
-            var service = new UserService(userManagerMock.Object, db, new Mock<Microsoft.Extensions.Logging.ILogger<UserService>>().Object, new Mock<INotificationService>().Object);
+            var service = CreateUserService(userManagerMock.Object, db);
 
             // --- ACT ---
             var result = await service.UpdateProfilePictureAsync("user-1", fileMock.Object, "dummyPath");
@@ -332,7 +337,7 @@ namespace AplikacjaNaSiłownię.Tests
             fileMock.Setup(_ => _.FileName).Returns("exploit.exe"); // Niedozwolone rozszerzenie!
             fileMock.Setup(_ => _.Length).Returns(500);
 
-            var service = new UserService(userManagerMock.Object, db, new Mock<Microsoft.Extensions.Logging.ILogger<UserService>>().Object, new Mock<INotificationService>().Object);
+            var service = CreateUserService(userManagerMock.Object, db);
 
             // --- ACT ---
             var result = await service.UpdateProfilePictureAsync("user-1", fileMock.Object, "dummyPath");
@@ -359,7 +364,7 @@ namespace AplikacjaNaSiłownię.Tests
             fileMock.Setup(_ => _.Length).Returns(fakeBytes.Length);
             fileMock.Setup(_ => _.OpenReadStream()).Returns(new MemoryStream(fakeBytes)); // Ale nagłówek to zwykły tekst (Brak poprawnych Magic Numbers)
 
-            var service = new UserService(userManagerMock.Object, db, new Mock<Microsoft.Extensions.Logging.ILogger<UserService>>().Object, new Mock<INotificationService>().Object);
+            var service = CreateUserService(userManagerMock.Object, db);
 
             // --- ACT ---
             var result = await service.UpdateProfilePictureAsync("user-1", fileMock.Object, "dummyPath");

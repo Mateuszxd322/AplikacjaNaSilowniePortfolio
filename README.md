@@ -8,7 +8,7 @@ Aplikacja idealnie nadaje się do zaprezentowania w profesjonalnym portfolio pro
 
 ## Główne Role i Funkcjonalności Systemu
 
-Aplikacja dzieli uprawnienia na trzy niezależne role, ujednolicone w ramach jednego systemu bezpieczeństwa ASP.NET Core Identity:
+Aplikacja dzieli uprawnienia na trzy niezależne role, zarządzane przez wydajny system **Claims-Based Authorization** (`CustomUserClaimsPrincipalFactory`). Role są przechowywane w jednej kolumnie `Role` tabeli użytkowników i automatycznie wstrzykiwane jako bezpieczne Claimy `ClaimTypes.Role` podczas logowania, eliminując nadmiarowe tabele Identity (`AspNetRoles`, `AspNetUserRoles`):
 
 ### 1. Panel Administratora
 *   **Weryfikacja Trenerów:** System autoryzacji "zero-trust" – nowo zarejestrowani trenerzy muszą zostać ręcznie zatwierdzeni przez administratora zanim uzyskają dostęp do systemu.
@@ -83,7 +83,9 @@ Prezentuje pełny cykl życia bezpiecznego zapytania AJAX (np. przy planowaniu n
 *   **Optymalizacja Usług w Tle (Background Task Tuning):**
     *   Wprowadzono flagę logiczną `IsReminderSent` na poziomie modelu `PlannedWorkout`. Zastąpiło to kosztowne przeszukiwanie bazy danych zapytaniami tekstowymi `LIKE` (Contains na treści powiadomień) w usłudze w tle w celu weryfikacji, czy przypomnienie zostało już wysłane. Zapytanie jest teraz wykonywane w ułamku milisekundy.
 *   **Bezpieczne Transakcje (ACID):** Wszystkie operacje modyfikujące powiązania między użytkownikami (np. usuwanie konta lub zakończenie współpracy) są obudowane w asynchroniczne transakcje bazodanowe (`BeginTransactionAsync`), co gwarantuje integralność danych w przypadku awarii serwera.
-*   **Luźne Powiązanie Audytowe (Loose Coupling):** Tabela `CollaborationHistories` nie ma fizycznych powiązań kluczy obcych z tabelą użytkowników, aby usunięcie konta użytkownika nie niszczyło logów historycznych (uniknięcie problemu *Cascade Delete*).
+*   **Spójność Relacyjna z Ochroną Audytu (Referential Integrity + Audit Protection):** Tabela `CollaborationHistories` posiada klucze obce z regułą `RESTRICT` na poziomie SQL Server. Przed usunięciem konta użytkownika serwis biznesowy automatycznie zeruje klucze (`SET NULL` via `ExecuteSqlRawAsync`), co zachowuje pełne logi audytowe (imię, nazwisko, powód zakończenia) nawet po skasowaniu konta. Rozwiązanie to omija ograniczenie cykliczności kaskad w SQL Server.
+*   **Kaskadowe Usuwanie Powiadomień (CASCADE):** Tabela `Notifications` posiada klucz obcy z regułą `ON DELETE CASCADE`. Usunięcie konta użytkownika automatycznie czyści wszystkie powiązane powiadomienia na poziomie silnika SQL, bez konieczności manualnego kodu w C#.
+*   **Czyszczenie Zasobów Dyskowych (Disk Leak Prevention):** Przy usuwaniu konta użytkownika system automatycznie weryfikuje i fizycznie kasuje plik zdjęcia profilowego z katalogu `wwwroot/uploads/profiles/`, zapobiegając gromadzeniu osieroconych plików i wyciekowi pamięci dyskowej serwera.
 
 ---
 
@@ -96,6 +98,7 @@ Prezentuje pełny cykl życia bezpiecznego zapytania AJAX (np. przy planowaniu n
 *   **Timezone Normalization (`TimeHelper`):** Całkowicie wyeliminowano problem przesunięć stref czasowych serwera w chmurze (np. Azure/AWS). Klasa pomocnicza unifikuje czas do strefy polskiej (CET/CEST) zarówno w systemach Windows, jak i Unix/Linux.
 *   **Brak Cichego Połykania Wyjątków:** Wszystkie transakcje raportują błędy przez wstrzyknięty interfejs `ILogger` z pełnym zrzutem śladu stosu (Stack Trace).
 *   **Zero warnings:** Kod kompiluje się z wynikiem **0 błędów i 0 ostrzeżeń** (pełna higiena kodu zgodna z regułami analizatorów statycznych CA).
+*   **Angielskie Nazewnictwo Właściwości (English Naming Convention):** Wszystkie właściwości modeli C#, kolumny bazy danych, bindingi widoków Razor oraz asercje testów jednostkowych zostały przetłumaczone na profesjonalny, angielski standard nazewniczy (`FirstName`, `LastName`, `Role`, `TrainerId`, `TrainerName`), co zapewnia pełną zgodność z międzynarodowymi konwencjami kodowania.
 *   **Testy Jednostkowe:** Projekt zawiera dedykowany zestaw testów jednostkowych (xUnit) pokrywających krytyczną logikę autoryzacji oraz zarządzania transakcjami.
 
 ## Struktura Projektu (Project Structure)

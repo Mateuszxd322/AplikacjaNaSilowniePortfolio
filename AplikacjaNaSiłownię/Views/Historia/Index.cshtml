@@ -47,7 +47,7 @@
                             <td class="fw-bold">@item.Title</td>
                             @if (userRole != "Klient")
                             {
-                                <td>@(item.Client != null ? $"{item.Client.Imie} {item.Client.Nazwisko}" : "Brak danych")</td>
+                                <td>@(item.Client != null ? $"{item.Client.FirstName} {item.Client.LastName}" : "Brak danych")</td>
                             }
                             <td>
                                 <span class="badge rounded-pill @badgeClass px-3 py-2">@finalStatus</span>

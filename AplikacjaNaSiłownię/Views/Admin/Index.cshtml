@@ -28,11 +28,11 @@
                 {
                     <tr>
                         <td>@user.Email</td>
-                        <td>@user.Imie</td>
-                        <td>@user.Nazwisko</td>
-                        <td><span class="badge bg-secondary text-neon">@user.Rola</span></td>
+                        <td>@user.FirstName</td>
+                        <td>@user.LastName</td>
+                        <td><span class="badge bg-secondary text-neon">@user.Role</span></td>
                         <td>
-                            @if (user.Rola != "Admin")
+                            @if (user.Role != "Admin")
                             {
                                 <form asp-action="DeleteUser" method="post" class="delete-user-form">
                                     <input type="hidden" name="userId" value="@user.Id" />

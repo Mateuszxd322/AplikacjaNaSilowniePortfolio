@@ -29,9 +29,9 @@ namespace AplikacjaNaSiłownię.Controllers
             // aby zapytanie SQL zostało sformatowane i wykonane po stronie bazy danych. 
             // Dzięki temu serwer nie pobiera wszystkich rekordów do pamięci RAM, co oszczędza zasoby.
             var targetUsers = await _userManager.Users
-                .Where(u => u.Rola == "Klient" || (u.Rola == "Trener" && u.IsApproved))
-                .OrderBy(u => u.Rola)
-                .Select(u => new { u.Id, Text = $"{u.Rola.ToUpper()}: {u.Imie} {u.Nazwisko}" })
+                .Where(u => u.Role == "Klient" || (u.Role == "Trener" && u.IsApproved))
+                .OrderBy(u => u.Role)
+                .Select(u => new { u.Id, Text = $"{u.Role.ToUpper()}: {u.FirstName} {u.LastName}" })
                 .ToListAsync();
 
             ViewBag.UserList = targetUsers;
@@ -53,14 +53,14 @@ namespace AplikacjaNaSiłownię.Controllers
             List<PlannedWorkout> dbWorkouts;
 
             // Logika pobierania treningów zależy od roli użytkownika.
-            if (user.Rola == "Trener")
+            if (user.Role == "Trener")
             {
                 // Dla trenera: pobieramy treningi wszystkich jego przypisanych klientów 
                 // (gdzie TrenerId klienta odpowiada ID obecnego trenera).
                 // Pomijamy treningi odwołane i dołączamy dane klienta za pomocą .Include().
                 dbWorkouts = await _context.PlannedWorkouts
                     .Include(w => w.Client)
-                    .Where(w => w.Client != null && w.Client.TrenerId == userId && w.Status != "Odwołany")
+                    .Where(w => w.Client != null && w.Client.TrainerId == userId && w.Status != "Odwołany")
                     .ToListAsync();
             }
             else
@@ -78,19 +78,19 @@ namespace AplikacjaNaSiłownię.Controllers
             {
                 // Ustalenie bieżącego statusu. Jeśli w bazie brakuje informacji, zakładamy "Zaplanowany".
                 var currentStatus = string.IsNullOrEmpty(w.Status) ? "Zaplanowany" : w.Status;
-                
+
                 // Ustalenie czasu końca. Jeśli trening nie ma końca, przyjmujemy czas jego rozpoczęcia.
                 var endTime = w.EndDate ?? w.StartDate;
-                
+
                 // Automatyczna aktualizacja statusu tylko na potrzeby wyświetlania na froncie:
                 // Jeśli trening nie jest odwołany i czas jego zakończenia już minął, oznaczamy go jako "Zrealizowany".
                 var finalStatus = (currentStatus != "Odwołany" && endTime < TimeHelper.GetPolishTime()) ? "Zrealizowany" : currentStatus;
-                
+
                 // Przypisanie klasy CSS, aby treningi wizualnie różniły się w kalendarzu.
                 var evClass = finalStatus == "Zrealizowany" ? "gym-event-completed" : "gym-event-planned";
 
                 // Trener widzi przed tytułem zajęć imię i nazwisko danego klienta, klient widzi tylko tytuł.
-                string evTitle = user.Rola == "Trener" ? $"[{w.Client!.Imie} {w.Client.Nazwisko}] {w.Title}" : w.Title;
+                string evTitle = user.Role == "Trener" ? $"[{w.Client!.FirstName} {w.Client.LastName}] {w.Title}" : w.Title;
 
                 return new
                 {
@@ -134,8 +134,8 @@ namespace AplikacjaNaSiłownię.Controllers
             // OPTYMALIZACJA: Zamiast pobierać całą listę i filtrować ją w C# (.Where na liście),
             // wysyłamy konkretne zapytanie do bazy danych. To kluczowe przy dużej liczbie użytkowników.
             var activeUsers = await _userManager.Users
-                .Where(u => u.Rola != "Trener" || u.IsApproved)
-                .OrderBy(u => u.Nazwisko)
+                .Where(u => u.Role != "Trener" || u.IsApproved)
+                .OrderBy(u => u.LastName)
                 .Take(50)
                 .ToListAsync();
 
@@ -159,7 +159,7 @@ namespace AplikacjaNaSiłownię.Controllers
             // OPTYMALIZACJA: Filtrowanie po stronie SQL. 
             // .ToListAsync() jest na samym końcu, co oznacza, że tylko przefiltrowane dane trafiają do aplikacji.
             var pendingTrainers = await _userManager.Users
-                .Where(u => u.Rola == "Trener" && !u.IsApproved)
+                .Where(u => u.Role == "Trener" && !u.IsApproved)
                 .ToListAsync();
 
             return View(pendingTrainers);
@@ -212,20 +212,20 @@ namespace AplikacjaNaSiłownię.Controllers
         {
             // OPTYMALIZACJA: Pobieramy tylko tych klientów, którzy faktycznie mają trenera.
             var clientsWithTrainers = await _userManager.Users
-                .Where(u => u.Rola == "Klient" && !string.IsNullOrEmpty(u.TrenerId))
+                .Where(u => u.Role == "Klient" && !string.IsNullOrEmpty(u.TrainerId))
                 .ToListAsync();
 
             // Szybkie pobranie samych trenerów do mapowania nazw.
             var trainers = await _userManager.Users
-                .Where(u => u.Rola == "Trener")
-                .ToDictionaryAsync(t => t.Id, t => $"{t.Imie} {t.Nazwisko}");
+                .Where(u => u.Role == "Trener")
+                .ToDictionaryAsync(t => t.Id, t => $"{t.FirstName} {t.LastName}");
 
             var collaborations = new List<AdminCollaborationViewModel>();
 
             foreach (var client in clientsWithTrainers)
             {
                 // TryGetValue jest wydajniejsze, bo przeszukuje słownik tylko raz zamiast dwóch
-                if (!trainers.TryGetValue(client.TrenerId!, out var trainerName))
+                if (!trainers.TryGetValue(client.TrainerId!, out var trainerName))
                 {
                     trainerName = "Nieznany Trener";
                 }
@@ -233,9 +233,9 @@ namespace AplikacjaNaSiłownię.Controllers
                 collaborations.Add(new AdminCollaborationViewModel
                 {
                     ClientId = client.Id,
-                    ClientName = $"{client.Imie} {client.Nazwisko}",
+                    ClientName = $"{client.FirstName} {client.LastName}",
                     // Używamy ?? "" aby upewnić się, że nie przypiszemy nulla do pola typu string
-                    TrainerId = client.TrenerId ?? string.Empty,
+                    TrainerId = client.TrainerId ?? string.Empty,
                     TrainerName = trainerName
                 });
             }

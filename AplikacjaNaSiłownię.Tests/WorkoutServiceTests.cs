@@ -35,7 +35,7 @@ namespace AplikacjaNaSiłownię.Tests
             // --- ARRANGE (Przygotowanie) ---
             // Tworzymy bazę danych i dodajemy do niej niezbędne dane (użytkownika).
             var db = GetInMemoryDbContext();
-            db.Users.Add(new ApplicationUser { Id = "client-1", TrenerId = "trainer-1", Rola = "Klient" });
+            db.Users.Add(new ApplicationUser { Id = "client-1", TrainerId = "trainer-1", Role = "Klient" });
             await db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
             var service = new WorkoutService(db, new Mock<INotificationService>().Object);
@@ -83,7 +83,7 @@ namespace AplikacjaNaSiłownię.Tests
             // --- ARRANGE ---
             var db = GetInMemoryDbContext();
             // Klient należy do Trenera-2
-            db.Users.Add(new ApplicationUser { Id = "client-1", TrenerId = "trainer-2", Rola = "Klient" });
+            db.Users.Add(new ApplicationUser { Id = "client-1", TrainerId = "trainer-2", Role = "Klient" });
             await db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
             var service = new WorkoutService(db, new Mock<INotificationService>().Object);
@@ -130,7 +130,7 @@ namespace AplikacjaNaSiłownię.Tests
             // --- ARRANGE ---
             var db = GetInMemoryDbContext();
             // Dodajemy użytkownika, aby nawigacja Include(w => w.Client) nie wyrzuciła błędu.
-            db.Users.Add(new ApplicationUser { Id = "client-1", Rola = "Klient" });
+            db.Users.Add(new ApplicationUser { Id = "client-1", Role = "Klient" });
             
             var workout = new PlannedWorkout 
             { 
@@ -160,7 +160,7 @@ namespace AplikacjaNaSiłownię.Tests
         {
             // --- ARRANGE ---
             var db = GetInMemoryDbContext();
-            db.Users.Add(new ApplicationUser { Id = "client-1", TrenerId = "trainer-assigned", Rola = "Klient" });
+            db.Users.Add(new ApplicationUser { Id = "client-1", TrainerId = "trainer-assigned", Role = "Klient" });
             db.PlannedWorkouts.Add(new PlannedWorkout 
             { 
                 ClientId = "client-1",
@@ -186,7 +186,7 @@ namespace AplikacjaNaSiłownię.Tests
         {
             // --- ARRANGE ---
             var db = GetInMemoryDbContext();
-            db.Users.Add(new ApplicationUser { Id = "client-1", TrenerId = "trainer-1", Rola = "Klient" });
+            db.Users.Add(new ApplicationUser { Id = "client-1", TrainerId = "trainer-1", Role = "Klient" });
             await db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
             var service = new WorkoutService(db, new Mock<INotificationService>().Object);
@@ -211,7 +211,7 @@ namespace AplikacjaNaSiłownię.Tests
         {
             // --- ARRANGE ---
             var db = GetInMemoryDbContext();
-            db.Users.Add(new ApplicationUser { Id = "client-1", TrenerId = "trainer-1", Rola = "Klient" });
+            db.Users.Add(new ApplicationUser { Id = "client-1", TrainerId = "trainer-1", Role = "Klient" });
             var workout = new PlannedWorkout 
             { 
                 ClientId = "client-1",
@@ -245,7 +245,7 @@ namespace AplikacjaNaSiłownię.Tests
         {
             // --- ARRANGE ---
             var db = GetInMemoryDbContext();
-            db.Users.Add(new ApplicationUser { Id = "client-1", TrenerId = "trainer-1", Rola = "Klient" });
+            db.Users.Add(new ApplicationUser { Id = "client-1", TrainerId = "trainer-1", Role = "Klient" });
             var workout = new PlannedWorkout 
             { 
                 ClientId = "client-1",
@@ -277,7 +277,7 @@ namespace AplikacjaNaSiłownię.Tests
         {
             // --- ARRANGE ---
             var db = GetInMemoryDbContext();
-            db.Users.Add(new ApplicationUser { Id = "client-1", TrenerId = "trainer-assigned", Rola = "Klient" });
+            db.Users.Add(new ApplicationUser { Id = "client-1", TrainerId = "trainer-assigned", Role = "Klient" });
             var workout = new PlannedWorkout 
             { 
                 ClientId = "client-1",
@@ -304,7 +304,7 @@ namespace AplikacjaNaSiłownię.Tests
         {
             // --- ARRANGE ---
             var db = GetInMemoryDbContext();
-            db.Users.Add(new ApplicationUser { Id = "client-owner", Rola = "Klient" });
+            db.Users.Add(new ApplicationUser { Id = "client-owner", Role = "Klient" });
             var workout = new PlannedWorkout 
             { 
                 ClientId = "client-owner",

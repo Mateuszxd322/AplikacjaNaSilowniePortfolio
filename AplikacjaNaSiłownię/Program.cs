@@ -1,5 +1,6 @@
 using AplikacjaNaSiłownię.Data;
 using AplikacjaNaSiłownię.Models;
+using AplikacjaNaSiłownię.Helpers;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.DataProtection;
@@ -26,6 +27,9 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 })
 .AddEntityFrameworkStores<ApplicationDbContext>()
 .AddDefaultTokenProviders();
+
+// Rejestrujemy naszą nową fabrykę tożsamości do wstrzykiwania roli z właściwości użytkownika
+builder.Services.AddScoped<IUserClaimsPrincipalFactory<ApplicationUser>, CustomUserClaimsPrincipalFactory>();
 
 builder.Services.ConfigureApplicationCookie(options =>
 {
@@ -107,15 +111,7 @@ var app = builder.Build();
 // Skrypt zasiewający konto Administratora: Admin, admin
 using (var scope = app.Services.CreateScope())
 {
-    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
     var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-
-    if (!roleManager.Roles.Any())
-    {
-        roleManager.CreateAsync(new IdentityRole("Admin")).Wait();
-        roleManager.CreateAsync(new IdentityRole("Trener")).Wait();
-        roleManager.CreateAsync(new IdentityRole("Klient")).Wait();
-    }
 
     if (userManager.FindByNameAsync("Admin").Result == null)
     {
@@ -123,15 +119,12 @@ using (var scope = app.Services.CreateScope())
         {
             UserName = "Admin",
             Email = "admin@system.local",
-            Imie = "Główny",
-            Nazwisko = "Administrator",
-            Rola = "Admin"
+            FirstName = "Główny",
+            LastName = "Administrator",
+            Role = "Admin"
         };
         // TODO: W produkcji użyć bezpieczniejszych metod inicjalizacji hasła (np. Secrets/Environment Variables)
-        if (userManager.CreateAsync(adminUser, "admin").Result.Succeeded)
-        {
-            userManager.AddToRoleAsync(adminUser, "Admin").Wait();
-        }
+        _ = userManager.CreateAsync(adminUser, "admin").Result;
     }
 }
 

@@ -22,7 +22,7 @@ namespace AplikacjaNaSiłownię.Controllers
             var user = await _userManager.FindByIdAsync(userId);
             if (user == null) return NotFound();
 
-            var rola = user.Rola;
+            var rola = user.Role;
             ViewBag.UserRole = rola;
 
             IQueryable<PlannedWorkout> query = _context.PlannedWorkouts.Include(w => w.Client);
@@ -34,7 +34,7 @@ namespace AplikacjaNaSiłownię.Controllers
             else if (rola == "Trener")
             {
                 // Widzi treningi swoich przypisanych klientów
-                query = query.Where(w => w.Client != null && w.Client.TrenerId == userId);
+                query = query.Where(w => w.Client != null && w.Client.TrainerId == userId);
             }
             else if (rola == "Klient")
             {
@@ -63,18 +63,18 @@ namespace AplikacjaNaSiłownię.Controllers
 
             bool canDelete = false;
 
-            if (user.Rola == "Admin")
+            if (user.Role == "Admin")
             {
                 canDelete = true;
             }
-            else if (user.Rola == "Trener")
+            else if (user.Role == "Trener")
             {
-                if (workout.Client != null && workout.Client.TrenerId == userId)
+                if (workout.Client != null && workout.Client.TrainerId == userId)
                 {
                     canDelete = true;
                 }
             }
-            else if (user.Rola == "Klient")
+            else if (user.Role == "Klient")
             {
                 if (workout.ClientId == userId)
                 {
