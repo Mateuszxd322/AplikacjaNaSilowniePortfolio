@@ -191,8 +191,8 @@ namespace AplikacjaNaSiłownię.Controllers
             {
                 record.IsDeletedByTrainer = true;
 
-                // Jeśli oboje usunęli, fizycznie skasuj z bazy
-                if (record.IsDeletedByClient && record.IsDeletedByTrainer)
+                // ZABEZPIECZENIE: Jeśli klient nie istnieje (ClientId to null), od razu usuwamy rekord fizycznie, zapobiegając powstawaniu śmieci w bazie.
+                if (record.IsDeletedByTrainer && (record.IsDeletedByClient || string.IsNullOrEmpty(record.ClientId)))
                 {
                     _context.CollaborationHistories.Remove(record);
                 }
@@ -263,7 +263,7 @@ namespace AplikacjaNaSiłownię.Controllers
                 return Json(new { success = false, message = errors });
             }
             var success = await _workoutService.AddWorkoutAsync(model, _userManager.GetUserId(User) ?? string.Empty, "Trener");
-            return Json(new { success, message = success ? "" : "Błąd: Czas rozpoczęcia nie może być w przeszłości lub brak relacji trener-klient." });
+            return Json(new { success, id = model.Id, message = success ? "" : "Błąd: Czas rozpoczęcia nie może być w przeszłości lub brak relacji trener-klient." });
         }
 
         [HttpPost]

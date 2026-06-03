@@ -213,6 +213,12 @@ namespace AplikacjaNaSiłownię.Controllers
         [EnableRateLimiting("LoginPolicy")]
         public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto model)
         {
+            // Bezpieczeństwo: walidacja obecności i poprawności modelu po stronie serwera
+            if (model == null || string.IsNullOrWhiteSpace(model.CurrentPassword) || string.IsNullOrWhiteSpace(model.NewPassword))
+            {
+                return Json(new { success = false, message = "Dane wejściowe nie mogą być puste." });
+            }
+
             // Administrator nie może zmieniać hasła z poziomu profilu (dodatkowe zabezpieczenie).
             if (User.IsInRole("Admin"))
             {

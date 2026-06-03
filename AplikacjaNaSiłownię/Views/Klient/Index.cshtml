@@ -247,7 +247,7 @@
                                 'Content-Type': 'application/json',
                                 'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
                             },
-                        body: JSON.stringify(wId)
+                        body: JSON.stringify(parseInt(wId))
                     })
                     .then(r => r.json())
                     .then(data => {

@@ -294,6 +294,7 @@
                     // Walidacja front-end: nie wysyłamy pustych danych.
                     if (!currentPassword || !newPassword || !confirmPassword) {
                         Swal.showValidationMessage(`Proszę wypełnić wszystkie pola`);
+                        return false; // return false blokuje zamknięcie modala i zapobiega pustej wysyłce AJAX
                     }
                     return { currentPassword, newPassword, confirmPassword };
                 }

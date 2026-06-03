@@ -59,6 +59,16 @@ namespace AplikacjaNaSiłownię.Controllers
             // 2. Warunek: Upewniamy się, że klient istnieje i rzeczywiście ma zaproszenie oczekujące na akceptację (PendingTrenerId nie jest puste)
             if (user != null && !string.IsNullOrEmpty(user.PendingTrainerId))
             {
+                // ZABEZPIECZENIE: Sprawdzamy czy trener wciąż istnieje w bazie, aby uniknąć naruszenia klucza obcego i błędu 500 przy zapisie.
+                var trainerExists = await _userManager.FindByIdAsync(user.PendingTrainerId) != null;
+                if (!trainerExists)
+                {
+                    user.PendingTrainerId = null;
+                    await _userManager.UpdateAsync(user);
+                    TempData["ErrorMessage"] = "Ten trener nie istnieje już w systemie.";
+                    return RedirectToAction("Requests");
+                }
+
                 // 3. Przypisujemy trenera: Ustawiamy stałe pole 'TrenerId' na ID trenera, który wysłał zaproszenie
                 user.TrainerId = user.PendingTrainerId;
 
@@ -155,8 +165,8 @@ namespace AplikacjaNaSiłownię.Controllers
             {
                 record.IsDeletedByClient = true;
 
-                // Jeśli oboje usunęli, fizycznie skasuj z bazy
-                if (record.IsDeletedByClient && record.IsDeletedByTrainer)
+                // ZABEZPIECZENIE: Jeśli trener nie istnieje (TrainerId to null), od razu usuwamy rekord fizycznie, zapobiegając powstawaniu śmieci w bazie.
+                if (record.IsDeletedByClient && (record.IsDeletedByTrainer || string.IsNullOrEmpty(record.TrainerId)))
                 {
                     _context.CollaborationHistories.Remove(record);
                 }
@@ -215,7 +225,7 @@ namespace AplikacjaNaSiłownię.Controllers
             {
                 // Używamy ?? string.Empty, aby zapewnić niepuste ID użytkownika, co eliminuje ostrzeżenie CS8604.
                 var success = await _workoutService.AddWorkoutAsync(model, _userManager.GetUserId(User) ?? string.Empty, "Klient");
-                return Json(new { success, message = success ? "" : "Błąd: Czas rozpoczęcia nie może być w przeszłości." });
+                return Json(new { success, id = model.Id, message = success ? "" : "Błąd: Czas rozpoczęcia nie może być w przeszłości." });
             }
             var errors = string.Join(" ", ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage));
             return Json(new { success = false, message = errors });

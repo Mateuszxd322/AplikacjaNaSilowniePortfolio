@@ -113,7 +113,7 @@
                                 'Content-Type': 'application/json',
                                 'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
                             },
-                            body: JSON.stringify(recordId)
+                            body: JSON.stringify(parseInt(recordId))
                         })
                             .then(response => response.json())
                             .then(data => {

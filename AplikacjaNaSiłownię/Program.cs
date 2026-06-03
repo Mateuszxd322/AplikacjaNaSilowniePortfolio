@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.HttpOverrides;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -108,6 +109,11 @@ builder.Services.AddRateLimiter(options =>
 
 var app = builder.Build();
 
+// Konfiguracja nagłówków proxy, aby poprawnie odczytywać IP klienta w środowisku produkcyjnym (niezbędne dla Rate Limitingu)
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor | Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto
+});
 // Skrypt zasiewający konto Administratora: Admin, admin
 using (var scope = app.Services.CreateScope())
 {

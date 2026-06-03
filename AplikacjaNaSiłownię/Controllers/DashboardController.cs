@@ -292,27 +292,18 @@ namespace AplikacjaNaSiłownię.Controllers
             // Pobieramy listę samych identyfikatorów (IDs) klientów trenera.
             var clientIds = activeClients.Select(c => c.Id).ToList();
 
-            // Zliczamy łączne statystyki treningowe u wszystkich podopiecznych trenera razem wziętych.
-            var totalWorkouts = await _context.PlannedWorkouts.CountAsync(w => clientIds.Contains(w.ClientId));
-
-            var completedWorkouts = await _context.PlannedWorkouts.CountAsync(w =>
-                clientIds.Contains(w.ClientId) &&
-                w.Status != "Odwołany" &&
-                (w.EndDate ?? w.StartDate) < TimeHelper.GetPolishTime());
-
-            var plannedWorkouts = await _context.PlannedWorkouts.CountAsync(w =>
-                clientIds.Contains(w.ClientId) &&
-                w.Status == "Zaplanowany" &&
-                (w.EndDate ?? w.StartDate) >= TimeHelper.GetPolishTime());
-
-            var cancelledWorkouts = await _context.PlannedWorkouts.CountAsync(w =>
-                clientIds.Contains(w.ClientId) &&
-                w.Status == "Odwołany");
+            // OPTYMALIZACJA BAZODANOWA: Filtrujemy dane po stronie bazy przy użyciu właściwości nawigacyjnych w.Client (EF Join).
+            // Unikamy pobierania list identyfikatorów z bazy do pamięci RAM i używania 'Contains' w SQL (zapobieganie limitowi 2100 parametrów).
+            var totalWorkouts = await _context.PlannedWorkouts.CountAsync(w => w.Client != null && w.Client.TrainerId == userId && w.Client.Role == "Klient");
+            var completedWorkouts = await _context.PlannedWorkouts.CountAsync(w => w.Client != null && w.Client.TrainerId == userId && w.Client.Role == "Klient" && w.Status != "Odwołany" && (w.EndDate ?? w.StartDate) < TimeHelper.GetPolishTime());
+            var plannedWorkouts = await _context.PlannedWorkouts.CountAsync(w => w.Client != null && w.Client.TrainerId == userId && w.Client.Role == "Klient" && w.Status == "Zaplanowany" && (w.EndDate ?? w.StartDate) >= TimeHelper.GetPolishTime());
+            var cancelledWorkouts = await _context.PlannedWorkouts.CountAsync(w => w.Client != null && w.Client.TrainerId == userId && w.Client.Role == "Klient" && w.Status == "Odwołany");
 
             // 3. LOGIKA WYŁANIANIA NAJBARDZIEJ AKTYWNEGO KLIENTA (Lidera Aktywności):
-            // Grupujemy treningi zrealizowane po ID klienta, zliczamy je, sortujemy malejąco i wybieramy pierwszego z góry.
+            // Zoptymalizowano zapytanie na podzapytanie SQL przez właściwość nawigacyjną w.Client
             var mostActiveClientData = await _context.PlannedWorkouts
-                .Where(w => clientIds.Contains(w.ClientId) && w.Status != "Odwołany" && (w.EndDate ?? w.StartDate) < TimeHelper.GetPolishTime())
+                .Where(w => w.Client != null && w.Client.TrainerId == userId && w.Client.Role == "Klient" && 
+                            w.Status != "Odwołany" && (w.EndDate ?? w.StartDate) < TimeHelper.GetPolishTime())
                 .GroupBy(w => w.ClientId)
                 .Select(g => new
                 {
@@ -334,9 +325,9 @@ namespace AplikacjaNaSiłownię.Controllers
             }
 
             // 4. PRZYGOTOWANIE DANYCH DO WYKRESU SŁUPKOWEGO (Aktywność poszczególnych klientów):
-            // Pobieramy liczbę zrealizowanych treningów dla każdego klienta z osobna.
+            // Zoptymalizowano pobieranie danych o zrealizowanych treningach dla każdego klienta z osobna (Join przez w.Client)
             var workoutsPerClient = await _context.PlannedWorkouts
-                .Where(w => clientIds.Contains(w.ClientId) &&
+                .Where(w => w.Client != null && w.Client.TrainerId == userId && w.Client.Role == "Klient" &&
                             w.Status != "Odwołany" &&
                             (w.EndDate ?? w.StartDate) < TimeHelper.GetPolishTime())
                 .GroupBy(w => w.ClientId)

@@ -57,7 +57,9 @@ namespace AplikacjaNaSiłownię.Services
                             client.TrainerId = null;
                         }
                         if (client.PendingTrainerId == user.Id) client.PendingTrainerId = null;
-                        await _userManager.UpdateAsync(client);
+                        var updateResult = await _userManager.UpdateAsync(client);
+                        // Rzucenie wyjątku wycofa transakcję w razie niepowodzenia aktualizacji powiązanego klienta
+                        if (!updateResult.Succeeded) throw new Exception($"Błąd podczas aktualizacji danych klienta {client.Id} przy usuwaniu trenera.");
                     }
                 }
                 else if (user.Role == "Klient" && !string.IsNullOrEmpty(user.TrainerId))
@@ -115,7 +117,9 @@ namespace AplikacjaNaSiłownię.Services
                 }
 
                 await _context.SaveChangesAsync();
-                await _userManager.DeleteAsync(user);
+                var deleteResult = await _userManager.DeleteAsync(user);
+                // Weryfikacja wyniku usuwania w Identity chroni przed zatwierdzeniem niespójnego stanu bazy danych
+                if (!deleteResult.Succeeded) throw new Exception($"Błąd podczas usuwania użytkownika {userId} z systemu Identity");
                 await transaction.CommitAsync();
                 return true;
             }

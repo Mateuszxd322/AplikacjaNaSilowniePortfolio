@@ -28,9 +28,10 @@ namespace AplikacjaNaSiłownię.Data
             builder.Entity<ApplicationUser>()
                 .HasIndex(u => u.TrainerId);
 
-            // Indeks optymalizujący pobieranie treningów dla konkretnego klienta
-            builder.Entity<PlannedWorkout>()
-                .HasIndex(w => w.ClientId);
+            // Usunięto redundantny indeks na ClientId (pokryty przez indeks złożony)
+            // Dodano indeks na PendingTrainerId w celu przyspieszenia wyszukiwania oczekujących zaproszeń
+            builder.Entity<ApplicationUser>()
+                .HasIndex(u => u.PendingTrainerId);
 
             // Indeks złożony optymalizujący pobieranie i sortowanie treningów klienta w kalendarzu i statystykach
             builder.Entity<PlannedWorkout>()

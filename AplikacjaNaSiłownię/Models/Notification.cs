@@ -17,7 +17,8 @@ namespace AplikacjaNaSiłownię.Models
         public string Title { get; set; } = string.Empty;
 
         [Required]
-        [MaxLength(500)]
+        // Limit podniesiony do 1000, aby zapobiec wyciekom/błędom obcięcia danych (truncation error) przy długich powodach rezygnacji
+        [MaxLength(1000)]
         public string Message { get; set; } = string.Empty;
 
         public DateTime CreatedAt { get; set; }
