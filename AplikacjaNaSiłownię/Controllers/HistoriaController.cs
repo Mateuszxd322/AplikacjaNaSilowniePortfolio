@@ -14,7 +14,9 @@ namespace AplikacjaNaSiłownię.Controllers
         private readonly ApplicationDbContext _context = context;
         private readonly UserManager<ApplicationUser> _userManager = userManager;
 
-        public async Task<IActionResult> Index()
+        private const int PageSize = 50;
+
+        public async Task<IActionResult> Index(int page = 1)
         {
             var userId = _userManager.GetUserId(User);
             if (userId == null) return Unauthorized();
@@ -42,8 +44,18 @@ namespace AplikacjaNaSiłownię.Controllers
                 query = query.Where(w => w.ClientId == userId);
             }
 
+            // STRONICOWANIE: administrator widzi treningi wszystkich klientów, więc pobieramy tylko jedną stronę naraz.
+            var totalPages = Math.Max(1, (int)Math.Ceiling(await query.CountAsync() / (double)PageSize));
+            page = Math.Clamp(page, 1, totalPages);
+            ViewBag.Page = page;
+            ViewBag.TotalPages = totalPages;
+
             // Pobieramy i sortujemy od najnowszych
-            var workouts = await query.OrderByDescending(w => w.StartDate).ToListAsync();
+            var workouts = await query
+                .OrderByDescending(w => w.StartDate).ThenByDescending(w => w.Id)
+                .Skip((page - 1) * PageSize)
+                .Take(PageSize)
+                .ToListAsync();
 
             return View(workouts);
         }
@@ -60,6 +72,13 @@ namespace AplikacjaNaSiłownię.Controllers
 
             var workout = await _context.PlannedWorkouts.Include(w => w.Client).FirstOrDefaultAsync(w => w.Id == id);
             if (workout == null) return Json(new { success = false, message = "Nie znaleziono treningu." });
+
+            // Historia dotyczy treningów zakończonych lub odwołanych. Nadchodzący trening odwołuje się w kalendarzu
+            // (z powiadomieniem drugiej strony), a nie kasuje po cichu z bazy.
+            if (workout.GetFinalStatus() == "Zaplanowany")
+            {
+                return Json(new { success = false, message = "Zaplanowanego treningu nie można usunąć z historii. Odwołaj go w kalendarzu." });
+            }
 
             bool canDelete = false;
 

@@ -1,6 +1,7 @@
 using AplikacjaNaSiłownię.Data;
 using AplikacjaNaSiłownię.Helpers;
 using AplikacjaNaSiłownię.Models;
+using AplikacjaNaSiłownię.Models.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -76,19 +77,6 @@ namespace AplikacjaNaSiłownię.Controllers
             // oczekiwanym przez frontend (np. przez bibliotekę kalendarza - FullCalendar).
             var workouts = dbWorkouts.Select(w =>
             {
-                // Ustalenie bieżącego statusu. Jeśli w bazie brakuje informacji, zakładamy "Zaplanowany".
-                var currentStatus = string.IsNullOrEmpty(w.Status) ? "Zaplanowany" : w.Status;
-
-                // Ustalenie czasu końca. Jeśli trening nie ma końca, przyjmujemy czas jego rozpoczęcia.
-                var endTime = w.EndDate ?? w.StartDate;
-
-                // Automatyczna aktualizacja statusu tylko na potrzeby wyświetlania na froncie:
-                // Jeśli trening nie jest odwołany i czas jego zakończenia już minął, oznaczamy go jako "Zrealizowany".
-                var finalStatus = (currentStatus != "Odwołany" && endTime < TimeHelper.GetPolishTime()) ? "Zrealizowany" : currentStatus;
-
-                // Przypisanie klasy CSS, aby treningi wizualnie różniły się w kalendarzu.
-                var evClass = finalStatus == "Zrealizowany" ? "gym-event-completed" : "gym-event-planned";
-
                 // Trener widzi przed tytułem zajęć imię i nazwisko danego klienta, klient widzi tylko tytuł.
                 string evTitle = user.Role == "Trener" ? $"[{w.Client!.FirstName} {w.Client.LastName}] {w.Title}" : w.Title;
 
@@ -99,8 +87,8 @@ namespace AplikacjaNaSiłownię.Controllers
                     start = w.StartDate.ToString("yyyy-MM-ddTHH:mm:ss"), // Formatowanie daty kompatybilne m.in. z FullCalendar
                     end = w.EndDate.HasValue ? w.EndDate.Value.ToString("yyyy-MM-ddTHH:mm:ss") : null,
                     description = w.Description,
-                    status = finalStatus,
-                    className = evClass
+                    status = w.GetFinalStatus(), // Wykorzystujemy scentralizowaną logikę z modelu
+                    className = w.GetCssClass() // Wykorzystujemy scentralizowaną logikę z modelu
                 };
             }).ToList();
 
@@ -121,24 +109,38 @@ namespace AplikacjaNaSiłownię.Controllers
         [ValidateAntiForgeryToken]
         // Akcja Administratora pozwalająca na edycję dowolnego treningu w systemie.
         // Wykorzystujemy IWorkoutService z flagą roli "Admin", co daje pełne uprawnienia.
-        public async Task<IActionResult> EditWorkout([FromBody] PlannedWorkout model)
+        public async Task<IActionResult> EditWorkout([FromBody] WorkoutDto model)
         {
-            if (!ModelState.IsValid) return BadRequest(ModelState);
+            if (!ModelState.IsValid)
+            {
+                var errors = string.Join(" ", ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage));
+                return Json(new { success = false, message = errors });
+            }
             // Dodajemy ?? "" dla bezpieczeństwa typów, mimo że [Authorize] pilnuje zalogowania
-            var success = await _workoutService.UpdateWorkoutAsync(model, _userManager.GetUserId(User) ?? string.Empty, "Admin");
-            return Json(new { success, message = success ? "" : "Błąd: Nie można edytować treningu." });
+            var success = await _workoutService.UpdateWorkoutAsync(model.ToEntity(includeId: true), _userManager.GetUserId(User) ?? string.Empty, "Admin");
+            return Json(new { success, message = success ? "" : "Błąd: Nie można edytować treningu odwołanego lub przenieść go w przeszłość." });
         }
 
-        public async Task<IActionResult> Index()
+        private const int UsersPageSize = 50;
+
+        public async Task<IActionResult> Index(int page = 1)
         {
             // OPTYMALIZACJA: Zamiast pobierać całą listę i filtrować ją w C# (.Where na liście),
             // wysyłamy konkretne zapytanie do bazy danych. To kluczowe przy dużej liczbie użytkowników.
-            var activeUsers = await _userManager.Users
-                .Where(u => u.Role != "Trener" || u.IsApproved)
-                .OrderBy(u => u.LastName)
-                .Take(50)
+            var query = _userManager.Users.Where(u => u.Role != "Trener" || u.IsApproved);
+
+            // STRONICOWANIE: pobieramy z bazy tylko jedną stronę wyników (Skip/Take wykonuje się po stronie SQL).
+            var totalPages = Math.Max(1, (int)Math.Ceiling(await query.CountAsync() / (double)UsersPageSize));
+            page = Math.Clamp(page, 1, totalPages);
+
+            var activeUsers = await query
+                .OrderBy(u => u.LastName).ThenBy(u => u.FirstName).ThenBy(u => u.Id)
+                .Skip((page - 1) * UsersPageSize)
+                .Take(UsersPageSize)
                 .ToListAsync();
 
+            ViewBag.Page = page;
+            ViewBag.TotalPages = totalPages;
             return View(activeUsers);
         }
 
@@ -148,8 +150,18 @@ namespace AplikacjaNaSiłownię.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteUser(string userId)
         {
-            // Usunięto zbędne przypisanie do zmiennej 'success', ponieważ wynik nie jest dalej sprawdzany w tej akcji.
-            await _userService.DeleteUserAsync(userId, "Administrator");
+            var success = await _userService.DeleteUserAsync(userId, "Administrator");
+
+            // Informujemy administratora o wyniku - bez tego nieudane usunięcie wyglądało tak samo jak udane.
+            if (success)
+            {
+                TempData["SuccessMessage"] = "Konto użytkownika zostało usunięte.";
+            }
+            else
+            {
+                TempData["ErrorMessage"] = "Nie udało się usunąć konta użytkownika.";
+            }
+
             return RedirectToAction("Index");
         }
 

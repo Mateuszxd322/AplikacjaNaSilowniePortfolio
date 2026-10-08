@@ -107,7 +107,8 @@
                     let end = info.event.end || start;
                     
                     document.getElementById('workoutId').value = info.event.id;
-                    document.getElementById('workoutDate').value = start.toISOString().split('T')[0];
+                    // Datę składamy z czasu LOKALNEGO. toISOString() przelicza na UTC i dla treningów tuż po północy cofało dzień.
+                    document.getElementById('workoutDate').value = start.getFullYear() + "-" + String(start.getMonth() + 1).padStart(2, '0') + "-" + String(start.getDate()).padStart(2, '0');
                     document.getElementById('workoutStartTime').value = String(start.getHours()).padStart(2, '0') + ":" + String(start.getMinutes()).padStart(2, '0');
                     document.getElementById('workoutEndTime').value = String(end.getHours()).padStart(2, '0') + ":" + String(end.getMinutes()).padStart(2, '0');
                     document.getElementById('workoutTitle').value = info.event.title;
@@ -187,8 +188,11 @@
                             workoutModal.hide();
                             calendar.refetchEvents();
                             gymAlert("Trening został odwołany.", 'success');
+                        } else {
+                            gymAlert(data.message || "Nie udało się odwołać treningu.", 'error');
                         }
-                    });
+                    })
+                    .catch(err => gymAlert("Wystąpił błąd podczas komunikacji z serwerem.", 'error'));
                 });
             });
 

@@ -1,5 +1,6 @@
 using AplikacjaNaSiłownię.Data;
 using AplikacjaNaSiłownię.Models;
+using AplikacjaNaSiłownię.Models.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -77,7 +78,13 @@ namespace AplikacjaNaSiłownię.Controllers
             {
                 // 5. Wysyłamy zaproszenie – ustawiamy pole 'PendingTrenerId' na ID tego trenera
                 client.PendingTrainerId = trenerId;
-                await _userManager.UpdateAsync(client); // Zapisujemy aktualizację w bazie danych Identity
+                var updateResult = await _userManager.UpdateAsync(client); // Zapisujemy aktualizację w bazie danych Identity
+
+                // Np. konflikt współbieżności: inny trener zaprosił tego klienta w tej samej chwili.
+                if (!updateResult.Succeeded)
+                {
+                    return Json(new { success = false, message = "Nie udało się wysłać zaproszenia. Odśwież stronę i spróbuj ponownie." });
+                }
 
                 // 6. Pobieramy pełne dane trenera, aby ładnie sformatować treść powiadomienia
                 var trener = await _userManager.FindByIdAsync(trenerId);
@@ -114,7 +121,12 @@ namespace AplikacjaNaSiłownię.Controllers
             {
                 // Zerujemy pole zaproszenia (ustawiamy na null), co oznacza anulowanie zaproszenia
                 client.PendingTrainerId = null;
-                await _userManager.UpdateAsync(client); // Zapisujemy zmiany
+                var updateResult = await _userManager.UpdateAsync(client); // Zapisujemy zmiany
+
+                if (!updateResult.Succeeded)
+                {
+                    return Json(new { success = false, message = "Nie udało się anulować zaproszenia. Odśwież stronę i spróbuj ponownie." });
+                }
 
                 var trener = await _userManager.FindByIdAsync(trenerId);
 
@@ -214,7 +226,8 @@ namespace AplikacjaNaSiłownię.Controllers
             // Weryfikacja: trener może podglądać tylko swoich klientów
             if (client == null || client.TrainerId != trenerId)
             {
-                return Unauthorized("Brak dostępu do tego kalendarza.");
+                // Użytkownik jest zalogowany, ale nie ma uprawnień do tego zasobu -> 403 (strona "Brak dostępu").
+                return Forbid();
             }
 
             ViewData["ClientName"] = $"{client.FirstName} {client.LastName}";
@@ -226,6 +239,8 @@ namespace AplikacjaNaSiłownię.Controllers
         [HttpGet]
         public async Task<IActionResult> GetClientWorkouts(string clientId)
         {
+            if (string.IsNullOrEmpty(clientId)) return BadRequest();
+
             var trenerId = _userManager.GetUserId(User);
             var client = await _userManager.FindByIdAsync(clientId);
 
@@ -253,32 +268,35 @@ namespace AplikacjaNaSiłownię.Controllers
         [ValidateAntiForgeryToken]
         // Akcja Trenera do zapisywania nowych treningów dla swoich przypisanych klientów.
         // Serwis weryfikuje relację trener-klient przed zapisem w bazie.
-        public async Task<IActionResult> SaveWorkout([FromBody] PlannedWorkout model)
+        public async Task<IActionResult> SaveWorkout([FromBody] WorkoutDto model)
         {
-            ModelState.Remove("Client"); // ClientId jest wymagany (bo trener wybiera klienta), ale nawigacyjny "Client" nie.
+            // ClientId jest wymagany, bo trener wybiera klienta, któremu planuje trening.
+            if (string.IsNullOrEmpty(model.ClientId))
+            {
+                ModelState.AddModelError(nameof(model.ClientId), "Nie wskazano klienta.");
+            }
 
             if (!ModelState.IsValid)
             {
                 var errors = string.Join(" ", ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage));
                 return Json(new { success = false, message = errors });
             }
-            var success = await _workoutService.AddWorkoutAsync(model, _userManager.GetUserId(User) ?? string.Empty, "Trener");
-            return Json(new { success, id = model.Id, message = success ? "" : "Błąd: Czas rozpoczęcia nie może być w przeszłości lub brak relacji trener-klient." });
+            var workout = model.ToEntity(includeId: false);
+            var success = await _workoutService.AddWorkoutAsync(workout, _userManager.GetUserId(User) ?? string.Empty, "Trener");
+            return Json(new { success, id = workout.Id, message = success ? "" : "Błąd: Czas rozpoczęcia nie może być w przeszłości lub brak relacji trener-klient." });
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> EditWorkout([FromBody] PlannedWorkout model)
+        public async Task<IActionResult> EditWorkout([FromBody] WorkoutDto model)
         {
-            ModelState.Remove("Client"); // ClientId jest wymagany (bo trener edytuje klienta), ale nawigacyjny "Client" nie.
-
             if (!ModelState.IsValid)
             {
                 var errors = string.Join(" ", ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage));
                 return Json(new { success = false, message = errors });
             }
-            var success = await _workoutService.UpdateWorkoutAsync(model, _userManager.GetUserId(User) ?? string.Empty, "Trener");
-            return Json(new { success, message = success ? "" : "Błąd: Nie można edytować treningu na czas przeszły lub brak uprawnień." });
+            var success = await _workoutService.UpdateWorkoutAsync(model.ToEntity(includeId: true), _userManager.GetUserId(User) ?? string.Empty, "Trener");
+            return Json(new { success, message = success ? "" : "Błąd: Nie można edytować treningu odwołanego, przenieść go w przeszłość lub brak uprawnień." });
         }
 
         [HttpPost]
@@ -286,7 +304,7 @@ namespace AplikacjaNaSiłownię.Controllers
         public async Task<IActionResult> DeleteWorkout([FromBody] int id)
         {
             var success = await _workoutService.DeleteWorkoutAsync(id, _userManager.GetUserId(User) ?? string.Empty, "Trener");
-            return Json(new { success, message = success ? "" : "Błąd: Nie można odwołać treningu." });
+            return Json(new { success, message = success ? "" : "Nie można odwołać tego treningu (już się odbył, jest odwołany lub brak uprawnień)." });
         }
     }
 }

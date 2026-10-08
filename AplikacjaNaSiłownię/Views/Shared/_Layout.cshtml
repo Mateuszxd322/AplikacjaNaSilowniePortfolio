@@ -224,7 +224,9 @@
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.14.5/dist/sweetalert2.all.min.js"
+        integrity="sha384-YB/DdIkloKoRpclWB8bNcYXWakt57USgtQPDzvnIDHYU0lasD5eWlXVo1S4ODukY"
+        crossorigin="anonymous"></script>
     <script>
         const Toast = Swal.mixin({
             toast: true,
@@ -237,10 +239,12 @@
             iconColor: '#0df055'
         });
 
+        // BEZPIECZEŃSTWO (XSS): używamy 'titleText' zamiast 'title'. SweetAlert2 renderuje 'title' jako HTML,
+        // a komunikaty zawierają dane wpisane przez użytkowników (tytuł treningu, powód, imię i nazwisko).
         window.gymAlert = function (msg, iconType = 'warning') {
             Toast.fire({
                 icon: iconType,
-                title: msg
+                titleText: msg
             });
         };
 
@@ -318,11 +322,11 @@
         // Obsługa komunikatów z TempData (wyświetlane po przeładowaniu strony)
         @if (TempData["SuccessMessage"] != null)
         {
-            <text>gymAlert('@TempData["SuccessMessage"]', 'success');</text>
+            <text>gymAlert(@Json.Serialize(TempData["SuccessMessage"]?.ToString()), 'success');</text>
         }
         @if (TempData["ErrorMessage"] != null)
         {
-            <text>gymAlert('@TempData["ErrorMessage"]', 'error');</text>
+            <text>gymAlert(@Json.Serialize(TempData["ErrorMessage"]?.ToString()), 'error');</text>
         }
     </script>
     <script src="~/js/site.js" asp-append-version="true"></script>

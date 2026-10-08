@@ -15,8 +15,12 @@ namespace AplikacjaNaSiłownię.Services
     // 2. Wysyłanie powiadomień "na żywo" przez SignalR (jeśli użytkownik jest aktualnie na stronie).
     public class NotificationService(
         ApplicationDbContext context,
-        IHubContext<NotificationHub> hubContext) : INotificationService
+        IHubContext<NotificationHub> hubContext,
+        ILogger<NotificationService> logger) : INotificationService
     {
+        // Logger zapisuje błędy wysyłki w logach serwera (zamiast cichego połykania wyjątków)
+        private readonly ILogger<NotificationService> _logger = logger;
+
         // _context pozwala nam rozmawiać z bazą danych (Entity Framework Core)
         private readonly ApplicationDbContext _context = context;
         
@@ -26,19 +30,19 @@ namespace AplikacjaNaSiłownię.Services
         // Tworzy powiadomienie, zapisuje je w bazie danych i natychmiast wysyła użytkownikowi przez SignalR.
         public async Task<bool> SendNotificationAsync(string userId, string title, string message, string type)
         {
+            // 1. Tworzymy nowy obiekt powiadomienia (rekord do bazy danych)
+            var notification = new Notification
+            {
+                UserId = userId,
+                Title = title,
+                Message = message,
+                Type = type,
+                CreatedAt = TimeHelper.GetPolishTime(), // Pobieramy aktualny czas w Polsce
+                IsRead = false // Nowo utworzone powiadomienie jest domyślnie NIEPRZECZYTANE
+            };
+
             try
             {
-                // 1. Tworzymy nowy obiekt powiadomienia (rekord do bazy danych)
-                var notification = new Notification
-                {
-                    UserId = userId,
-                    Title = title,
-                    Message = message,
-                    Type = type,
-                    CreatedAt = TimeHelper.GetPolishTime(), // Pobieramy aktualny czas w Polsce
-                    IsRead = false // Nowo utworzone powiadomienie jest domyślnie NIEPRZECZYTANE
-                };
-
                 // 2. Dodajemy powiadomienie do bazy danych
                 _context.Notifications.Add(notification);
                 await _context.SaveChangesAsync(); // Zapisujemy zmiany w bazie danych
@@ -57,8 +61,19 @@ namespace AplikacjaNaSiłownię.Services
 
                 return true; // Sukces!
             }
-            catch
+            catch (Exception ex)
             {
+                // Powiadomienie jest dodatkiem do głównej operacji (np. zapisu treningu), więc jego błąd jej nie przerywa,
+                // ale zapisujemy go w logach, żeby dało się go zdiagnozować.
+                _logger.LogError(ex, "Nie udało się wysłać powiadomienia '{Title}' do użytkownika {UserId}", title, userId);
+
+                // Jeśli zapis się nie powiódł, odpinamy powiadomienie od kontekstu. Inaczej kolejny SaveChanges
+                // w tym samym żądaniu próbowałby zapisać je ponownie i też zakończyłby się błędem.
+                if (_context.Entry(notification).State == EntityState.Added)
+                {
+                    _context.Entry(notification).State = EntityState.Detached;
+                }
+
                 return false; // W razie błędu zwracamy false
             }
         }
@@ -99,7 +114,7 @@ namespace AplikacjaNaSiłownię.Services
                 n.IsRead = true;
             }
             
-            // Zapisujemy wszystkie zmiany w bazie danych za pomocą jednego zapytania SQL
+            // Zapisujemy wszystkie zmiany w bazie danych jednym wywołaniem SaveChanges (jedna transakcja)
             await _context.SaveChangesAsync();
             return true;
         }

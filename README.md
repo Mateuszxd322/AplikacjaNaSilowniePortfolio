@@ -8,7 +8,7 @@ Aplikacja idealnie nadaje się do zaprezentowania w profesjonalnym portfolio pro
 
 ## Główne Role i Funkcjonalności Systemu
 
-Aplikacja dzieli uprawnienia na trzy niezależne role, zarządzane przez wydajny system **Claims-Based Authorization** (`CustomUserClaimsPrincipalFactory`). Role są przechowywane w jednej kolumnie `Role` tabeli użytkowników i automatycznie wstrzykiwane jako bezpieczne Claimy `ClaimTypes.Role` podczas logowania, eliminując nadmiarowe tabele Identity (`AspNetRoles`, `AspNetUserRoles`):
+Aplikacja dzieli uprawnienia na trzy niezależne role, zarządzane przez wydajny system **Claims-Based Authorization** (`CustomUserClaimsPrincipalFactory`). Role są przechowywane w jednej kolumnie `Role` tabeli użytkowników i automatycznie wstrzykiwane jako bezpieczne Claimy `ClaimTypes.Role` podczas logowania, bez korzystania z tabel łączących Identity (`AspNetRoles`, `AspNetUserRoles`):
 
 ### 1. Panel Administratora
 *   **Weryfikacja Trenerów:** System autoryzacji "zero-trust" – nowo zarejestrowani trenerzy muszą zostać ręcznie zatwierdzeni przez administratora zanim uzyskają dostęp do systemu.
@@ -30,14 +30,14 @@ Aplikacja dzieli uprawnienia na trzy niezależne role, zarządzane przez wydajny
 ### 4. System Powiadomień w Czasie Rzeczywistym (SignalR)
 *   **Błyskawiczna Komunikacja:** Wdrożono zaawansowany system powiadomień live oparty o technologię WebSockets (ASP.NET Core SignalR). Użytkownicy natychmiast dowiadują się o kluczowych zdarzeniach (np. wysłanie zaproszenia, akceptacja lub odrzucenie zaproszenia, anulowanie współpracy przez drugą stronę).
 *   **Dedykowane Przekierowania:** Kliknięcie powiadomienia w menu nawigacyjnym automatycznie przenosi użytkownika do odpowiedniej sekcji w systemie (np. administratora do widoku akceptacji trenerów, klienta do widoku zaproszeń).
-*   **Wielopoziomowe Powiadomienia Systemowe:** Po zalogowaniu lub wylogowaniu użytkownicy otrzymują eleganckie komunikaty toast ("Wylogowano pomyślnie", "Zalogowano pomyślnie") w prawym górnym rogu ekranu, zintegrowane w całej aplikacji dla wszystkich ról.
+*   **Wielopoziomowe Powiadomienia Systemowe:** Po wylogowaniu oraz po operacjach takich jak zmiana zdjęcia profilowego czy usunięcie konta użytkownicy otrzymują komunikaty toast (np. "Wylogowano pomyślnie") w prawym górnym rogu ekranu, zintegrowane w całej aplikacji dla wszystkich ról.
 *   **Interaktywny Dzwonek:** Wdrożono dynamiczny system animacji – po najechaniu kursorem na ikonę dzwonka w menu nawigacyjnym dzwonek rytmicznie dzwoni (obraca się w lewo i prawo), a pod nim wyświetla się czerwony licznik nieprzeczytanych wiadomości.
 
 ---
 
 ## Cyberbezpieczeństwo (Cybersecurity Hardening)
 
-Projekt został zaprojektowany z myślą o pełnej obronie przed atakami z listy **OWASP Top 10**:
+Projekt wdraża zabezpieczenia przed najczęstszymi atakami z listy **OWASP Top 10**:
 
 1.  **Pełna Obrona przed IDOR (Insecure Direct Object Reference):**
     *   Wszystkie zapytania AJAX oraz operacje w serwisach biznesowych są rygorystycznie weryfikowane na poziomie serwera. Trener nie ma technicznej możliwości podejrzenia statystyk ani modyfikacji kalendarza klienta, z którym nie ma aktywnej, zatwierdzonej współpracy.
@@ -51,6 +51,10 @@ Projekt został zaprojektowany z myślą o pełnej obronie przed atakami z listy
     *   Każde zapytanie modyfikujące dane (`POST`) posiada weryfikację tokenu antysfałszowaniowego. Skonfigurowano nagłówek `RequestVerificationToken`, umożliwiając bezproblemową współpracę z zapytaniami asynchronicznymi `fetch` w JavaScript.
 5.  **Biała Lista Ról:**
     *   Serwer uniemożliwia eskalację uprawnień (Privilege Escalation) podczas rejestracji, sprawdzając dopuszczalne role po stronie backendu (zapobiega to wstrzyknięciu roli "Admin" przez narzędzia deweloperskie).
+6.  **Ochrona przed XSS w powiadomieniach:**
+    *   Dane wpisywane przez użytkowników (tytuł treningu, powód zakończenia współpracy, imię i nazwisko) są wyświetlane jako zwykły tekst – zarówno na liście powiadomień (`escapeHtml`), jak i w komunikatach toast (`titleText` w SweetAlert2).
+7.  **Ochrona przed Over-Postingiem (DTO):**
+    *   Kalendarze wysyłają dane treningu jako `WorkoutDto`, a nie encję bazy danych. Klient nie może nadpisać pól zarządzanych przez serwer (status, flaga przypomnienia), a reguły dotyczące statusu (brak edycji odwołanych i odwoływania zakończonych treningów) są sprawdzane w warstwie serwisu.
 
 ## Architektura i Diagramy UML (UML Diagrams)
 
@@ -141,7 +145,7 @@ Projekt jest zorganizowany zgodnie z najlepszymi praktykami architektury trójwa
 ### Krok po kroku:
 1.  **Sklonuj repozytorium:**
     ```bash
-    git clone https://github.com/twoj-login/AplikacjaNaSilowniePortfolio.git
+    git clone https://github.com/Mateuszxd322/AplikacjaNaSilowniePortfolio.git
     cd AplikacjaNaSilowniePortfolio
     ```
 2.  **Skonfiguruj połączenie z bazą danych:**
@@ -163,7 +167,9 @@ Projekt jest zorganizowany zgodnie z najlepszymi praktykami architektury trójwa
     ```bash
     dotnet run --project AplikacjaNaSiłownię
     ```
-    Aplikacja uruchomi się pod adresem: `https://localhost:5001` (lub wskazanym w konsoli porcie HTTP).
+    Aplikacja uruchomi się pod adresem: `http://localhost:5126` (profil `https`: `https://localhost:7120`).
+
+> **Uwaga:** zdjęcia tła (`wwwroot/images/*.jpg`) nie są częścią repozytorium ze względu na rozmiar (łącznie ok. 45 MB). Bez nich aplikacja działa normalnie, tylko strony nie mają zdjęć w tle.
 
 ### Domyślne Dane Logowania Administratora:
 *   **Email:** `admin@system.local` (Nazwa użytkownika: `Admin`)
@@ -181,4 +187,4 @@ Projekt został stworzony przez **Mateusza Przytułę** jako reprezentacyjny pok
 
 ## Licencja
 
-Projekt udostępniony na licencji **MIT**. Możesz go dowolnie modyfikować i używać w celach edukacyjnych oraz rekrutacyjnych.
+Projekt udostępniony na licencji **MIT** (pełna treść w pliku [LICENSE](LICENSE)). Możesz go dowolnie modyfikować i używać w celach edukacyjnych oraz rekrutacyjnych.

@@ -33,10 +33,7 @@
                 {
                     foreach (var item in Model)
                     {
-                        var currentStatus = string.IsNullOrEmpty(item.Status) ? "Zaplanowany" : item.Status;
-                        var endTime = item.EndDate ?? item.StartDate;
-                        var isCompleted = currentStatus != "Odwołany" && endTime < DateTime.UtcNow;
-                        var finalStatus = isCompleted ? "Zrealizowany" : currentStatus;
+                        var finalStatus = item.GetFinalStatus();
                         var badgeClass = finalStatus == "Zrealizowany" ? "bg-success" : (finalStatus == "Odwołany" ? "bg-danger" : "bg-warning text-dark");
 
                         <tr>
@@ -56,9 +53,12 @@
                                 @(string.IsNullOrEmpty(item.Description) ? "-" : item.Description)
                             </td>
                             <td class="text-end">
-                                <button class="btn btn-sm btn-outline-danger delete-history-btn" data-id="@item.Id" title="Usuń trwale ten wpis">
-                                    <i class="bi bi-trash3"></i>
-                                </button>
+                                @if (finalStatus != "Zaplanowany")
+                                {
+                                    <button class="btn btn-sm btn-outline-danger delete-history-btn" data-id="@item.Id" title="Usuń trwale ten wpis">
+                                        <i class="bi bi-trash3"></i>
+                                    </button>
+                                }
                             </td>
                         </tr>
                     }
@@ -72,6 +72,15 @@
             </tbody>
         </table>
     </div>
+
+    @if ((int)ViewBag.TotalPages > 1)
+    {
+        <nav class="d-flex justify-content-between align-items-center mt-3">
+            <a class="btn btn-sm btn-outline-neon @((int)ViewBag.Page <= 1 ? "disabled" : "")" asp-action="Index" asp-route-page="@((int)ViewBag.Page - 1)">&laquo; Nowsze</a>
+            <span class="text-white-50 small">Strona @ViewBag.Page z @ViewBag.TotalPages</span>
+            <a class="btn btn-sm btn-outline-neon @((int)ViewBag.Page >= (int)ViewBag.TotalPages ? "disabled" : "")" asp-action="Index" asp-route-page="@((int)ViewBag.Page + 1)">Starsze &raquo;</a>
+        </nav>
+    }
 </div>
 
 @section Scripts {

@@ -96,10 +96,18 @@ namespace AplikacjaNaSiłownię.Services
                 if (workout.ClientId != editorId) return false;
             }
 
+            // Odwołanego treningu nie da się edytować. Sprawdzamy to na serwerze, bo ukrycie przycisku
+            // w przeglądarce nie chroni przed ręcznie wysłanym żądaniem.
+            if (workout.Status == "Odwołany") return false;
+
             // Walidację daty rozpoczęcia wykonujemy tylko przy jej rzeczywistej zmianie.
             // Zapobiega to blokowaniu edycji innych pól (np. opisu czy tytułu) dla treningów, które już się odbyły lub trwają.
-            if (workout.StartDate != model.StartDate)
+            var startDateChanged = workout.StartDate != model.StartDate;
+            if (startDateChanged)
             {
+                // Zakończonego treningu nie można przenieść na inny termin - zafałszowałoby to statystyki.
+                if (workout.GetFinalStatus() == "Zrealizowany") return false;
+
                 var now = TimeHelper.GetPolishTime();
                 var nowTrimmed = new DateTime(now.Year, now.Month, now.Day, now.Hour, now.Minute, 0);
                 if (model.StartDate < nowTrimmed) return false;
@@ -111,7 +119,11 @@ namespace AplikacjaNaSiłownię.Services
             workout.Title = model.Title;
             workout.Description = model.Description;
             workout.StartDate = model.StartDate;
-            workout.EndDate = model.EndDate;
+            // Brak godziny zakończenia traktujemy tak samo jak przy dodawaniu treningu: domyślnie 1 godzina.
+            workout.EndDate = model.EndDate ?? model.StartDate.AddHours(1);
+
+            // Po zmianie terminu przypomnienie musi zostać wysłane ponownie - dla nowej daty.
+            if (startDateChanged) workout.IsReminderSent = false;
 
             await _context.SaveChangesAsync();
 
@@ -179,6 +191,10 @@ namespace AplikacjaNaSiłownię.Services
             {
                 if (workout.ClientId != editorId) return false;
             }
+
+            // Odwołać można tylko trening, który jeszcze się nie odbył i nie został już odwołany.
+            // Bez tego dało się "odwołać" zakończony trening (zmieniając statystyki) albo wysłać powiadomienie drugi raz.
+            if (workout.GetFinalStatus() != "Zaplanowany") return false;
 
             workout.Status = "Odwołany";
             await _context.SaveChangesAsync();

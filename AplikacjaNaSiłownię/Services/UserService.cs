@@ -85,16 +85,6 @@ namespace AplikacjaNaSiłownię.Services
                     _context.PlannedWorkouts.RemoveRange(workouts);
                 }
 
-                // KROK: Usunięcie fizycznego pliku zdjęcia profilowego z dysku serwera (zapobieganie zaśmiecaniu)
-                if (!string.IsNullOrEmpty(user.ProfilePicturesPath))
-                {
-                    var filePath = System.IO.Path.Combine(_webHostEnvironment.WebRootPath, "uploads", "profiles", user.ProfilePicturesPath);
-                    if (System.IO.File.Exists(filePath))
-                    {
-                        System.IO.File.Delete(filePath);
-                    }
-                }
-
                 // KROK: Ręczne wyczyszczenie kluczy w historii współpracy (obejście ograniczeń cykliczności/kaskad SQL Server)
                 if (_context.Database.IsRelational())
                 {
@@ -121,6 +111,12 @@ namespace AplikacjaNaSiłownię.Services
                 // Weryfikacja wyniku usuwania w Identity chroni przed zatwierdzeniem niespójnego stanu bazy danych
                 if (!deleteResult.Succeeded) throw new Exception($"Błąd podczas usuwania użytkownika {userId} z systemu Identity");
                 await transaction.CommitAsync();
+
+                // KROK: Usunięcie fizycznego pliku zdjęcia profilowego z dysku serwera (zapobieganie zaśmiecaniu).
+                // Robimy to dopiero PO zatwierdzeniu transakcji - pliku nie da się "wycofać", więc przy rollbacku
+                // konto zostałoby w bazie ze ścieżką do nieistniejącego zdjęcia.
+                DeleteProfilePictureFile(user.ProfilePicturesPath);
+
                 return true;
             }
             catch (Exception ex)
@@ -128,6 +124,25 @@ namespace AplikacjaNaSiłownię.Services
                 _logger.LogError(ex, "Wystąpił błąd podczas usuwania użytkownika {UserId}", userId);
                 await transaction.RollbackAsync();
                 return false;
+            }
+        }
+
+        private void DeleteProfilePictureFile(string? fileName)
+        {
+            if (string.IsNullOrEmpty(fileName)) return;
+
+            try
+            {
+                var filePath = System.IO.Path.Combine(_webHostEnvironment.WebRootPath, "uploads", "profiles", fileName);
+                if (System.IO.File.Exists(filePath))
+                {
+                    System.IO.File.Delete(filePath);
+                }
+            }
+            catch (Exception ex)
+            {
+                // Konto jest już usunięte - osierocony plik nie może zmienić wyniku operacji, więc tylko go logujemy.
+                _logger.LogWarning(ex, "Nie udało się usunąć pliku zdjęcia profilowego {FileName}", fileName);
             }
         }
 

@@ -1,8 +1,10 @@
 using AplikacjaNaSiłownię.Models;
 using AplikacjaNaSiłownię.Models.ViewModels;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.EntityFrameworkCore;
 
 namespace AplikacjaNaSiłownię.Controllers
 {
@@ -10,14 +12,12 @@ namespace AplikacjaNaSiłownię.Controllers
     public class AccountController(
         UserManager<ApplicationUser> userManager,
         SignInManager<ApplicationUser> signInManager,
-        AplikacjaNaSiłownię.Data.ApplicationDbContext context,
         Services.IUserService userService,
         IWebHostEnvironment webHostEnvironment,
         Services.INotificationService notificationService) : Controller
     {
         private readonly UserManager<ApplicationUser> _userManager = userManager;
         private readonly SignInManager<ApplicationUser> _signInManager = signInManager;
-        private readonly AplikacjaNaSiłownię.Data.ApplicationDbContext _context = context;
         private readonly Services.IUserService _userService = userService;
         private readonly IWebHostEnvironment _webHostEnvironment = webHostEnvironment;
         private readonly Services.INotificationService _notificationService = notificationService;
@@ -68,12 +68,17 @@ namespace AplikacjaNaSiłownię.Controllers
                 {
                     if (model.Role == "Trener")
                     {
-                        // Powiadomienie wszystkich administratorów o nowej rejestracji trenera
-                        var admins = await _userManager.GetUsersInRoleAsync("Admin");
-                        foreach (var admin in admins)
+                        // Powiadomienie wszystkich administratorów o nowej rejestracji trenera.
+                        // Role trzymamy w kolumnie Role (nie w tabeli AspNetUserRoles), dlatego szukamy po tej kolumnie -
+                        // GetUsersInRoleAsync zwracałoby tutaj zawsze pustą listę.
+                        var adminIds = await _userManager.Users
+                            .Where(u => u.Role == "Admin")
+                            .Select(u => u.Id)
+                            .ToListAsync();
+                        foreach (var adminId in adminIds)
                         {
                             await _notificationService.SendNotificationAsync(
-                                admin.Id,
+                                adminId,
                                 "Nowy Trener do weryfikacji",
                                 $"Użytkownik {user.FirstName} {user.LastName} ({user.Email}) zarejestrował się jako Trener i oczekuje na zatwierdzenie konta.",
                                 "System"
@@ -98,8 +103,10 @@ namespace AplikacjaNaSiłownię.Controllers
         }
 
         [HttpGet]
-        public IActionResult Login()
+        public IActionResult Login(string? returnUrl = null)
         {
+            // Adres, na który użytkownik próbował wejść przed przekierowaniem do logowania.
+            ViewData["ReturnUrl"] = returnUrl;
             return View();
         }
 
@@ -107,8 +114,10 @@ namespace AplikacjaNaSiłownię.Controllers
         [ValidateAntiForgeryToken] // Zabezpieczenie przed atakami CSRF
         // Krytyczne zabezpieczenie: Rate Limiting chroni endpoint logowania przed automatycznymi atakami Brute Force.
         [EnableRateLimiting("LoginPolicy")]
-        public async Task<IActionResult> Login(LoginViewModel model)
+        public async Task<IActionResult> Login(LoginViewModel model, string? returnUrl = null)
         {
+            ViewData["ReturnUrl"] = returnUrl;
+
             if (ModelState.IsValid)
             {
                 // Szukamy po adresie e-mail LUB po nazwie użytkownika (UserName)
@@ -121,20 +130,31 @@ namespace AplikacjaNaSiłownię.Controllers
                     return View(model);
                 }
 
-                // Blokujemy logowanie TYLKO dla Trenerów, którzy nie są zatwierdzeni.
-                // Klienci i Admini (szczególnie ci założeni przed dodaniem pola IsApproved)
-                // mogą się logować bez przeszkód.
-                if (user.Role == "Trener" && !user.IsApproved)
-                {
-                    ModelState.AddModelError(string.Empty, "Konto oczekuje na zatwierdzenie przez administratora. Spróbuj ponownie później.");
-                    return View(model);
-                }
-
-                // Włączenie zabezpieczenia przed Brute Force (lockoutOnFailure: true)
-                var result = await _signInManager.PasswordSignInAsync(user, model.Password, isPersistent: false, lockoutOnFailure: true);
+                // Najpierw TYLKO weryfikujemy hasło (bez logowania), z włączonym zabezpieczeniem przed Brute Force
+                // (lockoutOnFailure: true). Dzięki temu komunikat o oczekiwaniu na zatwierdzenie widzi wyłącznie
+                // osoba znająca hasło - wcześniej zdradzał on istnienie konta każdemu, kto wpisał sam e-mail.
+                var result = await _signInManager.CheckPasswordSignInAsync(user, model.Password, lockoutOnFailure: true);
 
                 if (result.Succeeded)
                 {
+                    // Blokujemy logowanie TYLKO dla Trenerów, którzy nie są zatwierdzeni.
+                    // Klienci i Admini (szczególnie ci założeni przed dodaniem pola IsApproved)
+                    // mogą się logować bez przeszkód.
+                    if (user.Role == "Trener" && !user.IsApproved)
+                    {
+                        ModelState.AddModelError(string.Empty, "Konto oczekuje na zatwierdzenie przez administratora. Spróbuj ponownie później.");
+                        return View(model);
+                    }
+
+                    await _signInManager.SignInAsync(user, isPersistent: false);
+
+                    // Wracamy na stronę, z której użytkownik został odesłany do logowania.
+                    // Url.IsLocalUrl chroni przed atakiem Open Redirect (przekierowaniem na obcą domenę).
+                    if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
+                    {
+                        return LocalRedirect(returnUrl);
+                    }
+
                     return RedirectToAction("Index", "Home");
                 }
 
@@ -160,8 +180,15 @@ namespace AplikacjaNaSiłownię.Controllers
             return RedirectToAction("Index", "Home");
         }
 
+        // Strona wyświetlana zalogowanemu użytkownikowi, który nie ma uprawnień do zasobu (HTTP 403).
         [HttpGet]
-        [Microsoft.AspNetCore.Authorization.Authorize]
+        public IActionResult AccessDenied()
+        {
+            return View();
+        }
+
+        [HttpGet]
+        [Authorize]
         public async Task<IActionResult> Profile()
         {
             var user = await _userManager.GetUserAsync(User);
@@ -183,6 +210,7 @@ namespace AplikacjaNaSiłownię.Controllers
         }
 
         [HttpPost]
+        [Authorize]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> UploadProfilePicture(IFormFile profilePicture)
         {
@@ -208,6 +236,7 @@ namespace AplikacjaNaSiłownię.Controllers
 
         // Akcja asynchroniczna obsługująca żądanie zmiany hasła wysłane przez AJAX.
         [HttpPost]
+        [Authorize]
         [ValidateAntiForgeryToken]
         // Krytyczne zabezpieczenie: Rate Limiting chroni przed próbami masowej zmiany hasła przez boty / złośliwe skrypty.
         [EnableRateLimiting("LoginPolicy")]

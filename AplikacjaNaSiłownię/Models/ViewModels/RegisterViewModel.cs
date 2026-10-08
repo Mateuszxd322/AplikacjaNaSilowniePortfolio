@@ -13,6 +13,8 @@ namespace AplikacjaNaSiłownię.Models.ViewModels
         public string LastName { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Login/Email jest wymagany")]
+        [EmailAddress(ErrorMessage = "Podaj poprawny adres e-mail.")]
+        [StringLength(256, ErrorMessage = "Adres e-mail nie może być dłuższy niż 256 znaków.")]
         [Display(Name = "Login / Email")]
         public string Email { get; set; } = string.Empty;
 

@@ -234,7 +234,7 @@
                         viewWorkoutModal.hide();
                         gymAlert('Zmiany narzucone poprawnie!', 'success');
                     } else {
-                        gymAlert('Błąd podczas edytowania z poziomu Admina!', 'error');
+                        gymAlert(data.message || 'Błąd podczas edytowania z poziomu Admina!', 'error');
                     }
                 })
                 .catch(err => console.error("Error editing", err));

@@ -75,14 +75,11 @@ namespace AplikacjaNaSiłownię.Services
             // Przechodzimy w pętli przez wszystkie znalezione treningi
             foreach (var workout in upcomingWorkouts)
             {
-                // Tworzymy unikalną sygnaturę powiadomienia, np. "[ReminderID: 15]"
-                var reminderSignature = $"[ReminderID: {workout.Id}]";
-                
                 // Wysyłamy powiadomienie do klienta
                 await notificationService.SendNotificationAsync(
                     workout.ClientId,
                     "Trening już jutro!",
-                    $"Przypominamy o Twoim zaplanowanym treningu '{workout.Title}' jutro o godzinie {workout.StartDate:HH:mm}. Zapraszamy! {reminderSignature}",
+                    $"Przypominamy o Twoim zaplanowanym treningu '{workout.Title}' jutro o godzinie {workout.StartDate:HH:mm}. Zapraszamy!",
                     "Trening"
                 );
 

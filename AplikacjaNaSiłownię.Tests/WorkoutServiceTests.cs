@@ -347,5 +347,122 @@ namespace AplikacjaNaSiłownię.Tests
             Assert.All(result, w => Assert.NotEqual("Odwołany", w.Status));
             Assert.All(result, w => Assert.Equal("client-1", w.ClientId));
         }
+
+        [Fact]
+        public async Task UpdateWorkout_DateChanged_ResetsReminderFlag()
+        {
+            // --- ARRANGE ---
+            var db = GetInMemoryDbContext();
+            db.Users.Add(new ApplicationUser { Id = "client-1", Role = "Klient" });
+            var workout = new PlannedWorkout
+            {
+                ClientId = "client-1",
+                StartDate = DateTime.UtcNow.AddDays(1),
+                Title = "Test",
+                IsReminderSent = true // Przypomnienie dla starego terminu zostało już wysłane
+            };
+            db.PlannedWorkouts.Add(workout);
+            await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+            var service = new WorkoutService(db, new Mock<INotificationService>().Object);
+            var model = new PlannedWorkout { Id = workout.Id, Title = "Test", StartDate = DateTime.UtcNow.AddDays(5) };
+
+            // --- ACT ---
+            var result = await service.UpdateWorkoutAsync(model, "client-1", "Klient");
+
+            // --- ASSERT ---
+            Assert.True(result);
+            var saved = await db.PlannedWorkouts.FirstAsync(TestContext.Current.CancellationToken);
+            // Nowy termin = nowe przypomnienie, więc flaga musi wrócić na false.
+            Assert.False(saved.IsReminderSent);
+        }
+
+        [Fact]
+        public async Task UpdateWorkout_CancelledWorkout_ReturnsFalse()
+        {
+            // --- ARRANGE ---
+            var db = GetInMemoryDbContext();
+            db.Users.Add(new ApplicationUser { Id = "client-1", Role = "Klient" });
+            var workout = new PlannedWorkout
+            {
+                ClientId = "client-1",
+                StartDate = DateTime.UtcNow.AddDays(1),
+                Title = "Original Title",
+                Status = "Odwołany"
+            };
+            db.PlannedWorkouts.Add(workout);
+            await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+            var service = new WorkoutService(db, new Mock<INotificationService>().Object);
+            var model = new PlannedWorkout { Id = workout.Id, Title = "Updated Title", StartDate = workout.StartDate };
+
+            // --- ACT ---
+            var result = await service.UpdateWorkoutAsync(model, "client-1", "Klient");
+
+            // --- ASSERT ---
+            Assert.False(result);
+            var saved = await db.PlannedWorkouts.FirstAsync(TestContext.Current.CancellationToken);
+            Assert.Equal("Original Title", saved.Title);
+        }
+
+        [Fact]
+        public async Task UpdateWorkout_CompletedWorkoutMovedToFuture_ReturnsFalse()
+        {
+            // --- ARRANGE ---
+            var db = GetInMemoryDbContext();
+            db.Users.Add(new ApplicationUser { Id = "client-1", Role = "Klient" });
+            var originalStart = DateTime.UtcNow.AddDays(-3);
+            var workout = new PlannedWorkout
+            {
+                ClientId = "client-1",
+                StartDate = originalStart,
+                EndDate = originalStart.AddHours(1),
+                Title = "Odbyty trening"
+            };
+            db.PlannedWorkouts.Add(workout);
+            await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+            var service = new WorkoutService(db, new Mock<INotificationService>().Object);
+            var model = new PlannedWorkout { Id = workout.Id, Title = "Odbyty trening", StartDate = DateTime.UtcNow.AddDays(2) };
+
+            // --- ACT ---
+            var result = await service.UpdateWorkoutAsync(model, "client-1", "Klient");
+
+            // --- ASSERT ---
+            Assert.False(result);
+            var saved = await db.PlannedWorkouts.FirstAsync(TestContext.Current.CancellationToken);
+            Assert.Equal(originalStart, saved.StartDate); // Termin zakończonego treningu nie może się zmienić
+        }
+
+        [Fact]
+        public async Task DeleteWorkout_CompletedWorkout_ReturnsFalse()
+        {
+            // --- ARRANGE ---
+            var db = GetInMemoryDbContext();
+            db.Users.Add(new ApplicationUser { Id = "client-1", Role = "Klient" });
+            var workout = new PlannedWorkout
+            {
+                ClientId = "client-1",
+                Status = "Zaplanowany",
+                StartDate = DateTime.UtcNow.AddDays(-3),
+                EndDate = DateTime.UtcNow.AddDays(-3).AddHours(1),
+                Title = "Odbyty trening"
+            };
+            db.PlannedWorkouts.Add(workout);
+            await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+            var notificationMock = new Mock<INotificationService>();
+            var service = new WorkoutService(db, notificationMock.Object);
+
+            // --- ACT ---
+            var result = await service.DeleteWorkoutAsync(workout.Id, "client-1", "Klient");
+
+            // --- ASSERT ---
+            Assert.False(result);
+            var saved = await db.PlannedWorkouts.FirstAsync(TestContext.Current.CancellationToken);
+            Assert.Equal("Zaplanowany", saved.Status); // Zakończonego treningu nie da się odwołać
+            // Nikt nie powinien dostać powiadomienia o odwołaniu, skoro do niego nie doszło.
+            notificationMock.Verify(n => n.SendNotificationAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        }
     }
 }

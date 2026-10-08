@@ -1,5 +1,6 @@
 using AplikacjaNaSiłownię.Data;
 using AplikacjaNaSiłownię.Models;
+using AplikacjaNaSiłownię.Models.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -76,7 +77,13 @@ namespace AplikacjaNaSiłownię.Controllers
                 user.PendingTrainerId = null;
 
                 // 5. Zapisujemy zmiany w bazie danych
-                await _userManager.UpdateAsync(user);
+                var updateResult = await _userManager.UpdateAsync(user);
+                if (!updateResult.Succeeded)
+                {
+                    // Np. konflikt współbieżności: trener wycofał zaproszenie w tej samej chwili.
+                    TempData["ErrorMessage"] = "Nie udało się zaakceptować zaproszenia. Odśwież stronę i spróbuj ponownie.";
+                    return RedirectToAction("Requests");
+                }
 
                 // 6. Wysyłamy powiadomienie do trenera, żeby dowiedział się na żywo, że klient zaakceptował jego zaproszenie
                 if (!string.IsNullOrEmpty(user.TrainerId))
@@ -111,7 +118,12 @@ namespace AplikacjaNaSiłownię.Controllers
                 user.PendingTrainerId = null;
 
                 // 5. Zapisujemy zmiany w bazie danych
-                await _userManager.UpdateAsync(user);
+                var updateResult = await _userManager.UpdateAsync(user);
+                if (!updateResult.Succeeded)
+                {
+                    TempData["ErrorMessage"] = "Nie udało się odrzucić zaproszenia. Odśwież stronę i spróbuj ponownie.";
+                    return RedirectToAction("Requests");
+                }
 
                 // 6. Wysyłamy powiadomienie do trenera, informujące o odrzuceniu zaproszenia
                 await _notificationService.SendNotificationAsync(
@@ -216,16 +228,14 @@ namespace AplikacjaNaSiłownię.Controllers
         [ValidateAntiForgeryToken] // Zabezpieczenie przed atakami CSRF
         // Akcja Klienta do samodzielnego planowania treningu.
         // Wykorzystujemy Service Layer, aby odseparować logikę biznesową od kontrolera.
-        public async Task<IActionResult> SaveWorkout([FromBody] PlannedWorkout model)
+        public async Task<IActionResult> SaveWorkout([FromBody] WorkoutDto model)
         {
-            ModelState.Remove("ClientId");
-            ModelState.Remove("Client");
-
             if (ModelState.IsValid)
             {
+                var workout = model.ToEntity(includeId: false);
                 // Używamy ?? string.Empty, aby zapewnić niepuste ID użytkownika, co eliminuje ostrzeżenie CS8604.
-                var success = await _workoutService.AddWorkoutAsync(model, _userManager.GetUserId(User) ?? string.Empty, "Klient");
-                return Json(new { success, id = model.Id, message = success ? "" : "Błąd: Czas rozpoczęcia nie może być w przeszłości." });
+                var success = await _workoutService.AddWorkoutAsync(workout, _userManager.GetUserId(User) ?? string.Empty, "Klient");
+                return Json(new { success, id = workout.Id, message = success ? "" : "Błąd: Czas rozpoczęcia nie może być w przeszłości." });
             }
             var errors = string.Join(" ", ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage));
             return Json(new { success = false, message = errors });
@@ -269,20 +279,17 @@ namespace AplikacjaNaSiłownię.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken] // Zabezpieczenie przed atakami CSRF
         //Metoda do edycji istniejącego treningu
-        public async Task<IActionResult> EditWorkout([FromBody] PlannedWorkout model)
+        public async Task<IActionResult> EditWorkout([FromBody] WorkoutDto model)
         {
-            ModelState.Remove("ClientId");
-            ModelState.Remove("Client");
-
             if (!ModelState.IsValid)
             {
                 var errors = string.Join(" ", ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage));
                 return Json(new { success = false, message = errors });
             }
             //Przekazujemy zmieniony model do serwisu
-            var success = await _workoutService.UpdateWorkoutAsync(model, _userManager.GetUserId(User) ?? string.Empty, "Klient");
+            var success = await _workoutService.UpdateWorkoutAsync(model.ToEntity(includeId: true), _userManager.GetUserId(User) ?? string.Empty, "Klient");
             //Zwracamy wynik. Jesli sie nie udalo , informujemy o możliwych przyczynach.
-            return Json(new { success, message = success ? "" : "Błąd: Nie można edytować treningu na czas przeszły lub brak uprawnień." });
+            return Json(new { success, message = success ? "" : "Błąd: Nie można edytować treningu odwołanego, zakończonego lub przenieść go w przeszłość." });
         }
     }
 }

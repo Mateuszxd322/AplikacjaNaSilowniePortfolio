@@ -49,6 +49,15 @@
             </tbody>
         </table>
     </div>
+
+    @if ((int)ViewBag.TotalPages > 1)
+    {
+        <nav class="d-flex justify-content-between align-items-center mt-3">
+            <a class="btn btn-sm btn-outline-neon @((int)ViewBag.Page <= 1 ? "disabled" : "")" asp-action="Index" asp-route-page="@((int)ViewBag.Page - 1)">&laquo; Poprzednia</a>
+            <span class="text-white-50 small">Strona @ViewBag.Page z @ViewBag.TotalPages</span>
+            <a class="btn btn-sm btn-outline-neon @((int)ViewBag.Page >= (int)ViewBag.TotalPages ? "disabled" : "")" asp-action="Index" asp-route-page="@((int)ViewBag.Page + 1)">Następna &raquo;</a>
+        </nav>
+    }
 </div>
 
 @section Scripts {
