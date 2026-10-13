@@ -73,13 +73,6 @@ namespace AplikacjaNaSiłownię.Controllers
             var workout = await _context.PlannedWorkouts.Include(w => w.Client).FirstOrDefaultAsync(w => w.Id == id);
             if (workout == null) return Json(new { success = false, message = "Nie znaleziono treningu." });
 
-            // Historia dotyczy treningów zakończonych lub odwołanych. Nadchodzący trening odwołuje się w kalendarzu
-            // (z powiadomieniem drugiej strony), a nie kasuje po cichu z bazy.
-            if (workout.GetFinalStatus() == "Zaplanowany")
-            {
-                return Json(new { success = false, message = "Zaplanowanego treningu nie można usunąć z historii. Odwołaj go w kalendarzu." });
-            }
-
             bool canDelete = false;
 
             if (user.Role == "Admin")
@@ -103,6 +96,14 @@ namespace AplikacjaNaSiłownię.Controllers
 
             if (canDelete)
             {
+                // Historia dotyczy treningów zakończonych lub odwołanych. Nadchodzący trening odwołuje się w kalendarzu
+                // (z powiadomieniem drugiej strony), a nie kasuje po cichu z bazy.
+                // Sprawdzamy to dopiero PO weryfikacji uprawnień, żeby komunikat nie zdradzał stanu cudzych treningów.
+                if (workout.GetFinalStatus() == "Zaplanowany")
+                {
+                    return Json(new { success = false, message = "Zaplanowanego treningu nie można usunąć z historii. Odwołaj go w kalendarzu." });
+                }
+
                 _context.PlannedWorkouts.Remove(workout);
                 await _context.SaveChangesAsync();
                 return Json(new { success = true });

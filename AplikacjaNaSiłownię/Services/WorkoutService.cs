@@ -102,13 +102,14 @@ namespace AplikacjaNaSiłownię.Services
 
             // Walidację daty rozpoczęcia wykonujemy tylko przy jej rzeczywistej zmianie.
             // Zapobiega to blokowaniu edycji innych pól (np. opisu czy tytułu) dla treningów, które już się odbyły lub trwają.
+            var now = TimeHelper.GetPolishTime();
+            var wasCompleted = workout.GetFinalStatus() == "Zrealizowany";
             var startDateChanged = workout.StartDate != model.StartDate;
             if (startDateChanged)
             {
                 // Zakończonego treningu nie można przenieść na inny termin - zafałszowałoby to statystyki.
-                if (workout.GetFinalStatus() == "Zrealizowany") return false;
+                if (wasCompleted) return false;
 
-                var now = TimeHelper.GetPolishTime();
                 var nowTrimmed = new DateTime(now.Year, now.Month, now.Day, now.Hour, now.Minute, 0);
                 if (model.StartDate < nowTrimmed) return false;
             }
@@ -116,11 +117,18 @@ namespace AplikacjaNaSiłownię.Services
             // KROK: Walidacja logiczna czasu trwania przy edycji
             if (model.EndDate.HasValue && model.EndDate.Value <= model.StartDate) return false;
 
+            // Brak godziny zakończenia traktujemy tak samo jak przy dodawaniu treningu: domyślnie 1 godzina.
+            // Zakończony trening zachowuje dotychczasową godzinę zakończenia, jeśli nie podano nowej.
+            var newEndDate = model.EndDate ?? (wasCompleted ? workout.EndDate : model.StartDate.AddHours(1));
+
+            // Zakończony trening musi pozostać zakończony. Bez tego przesunięcie samej godziny zakończenia w przyszłość
+            // przywracało status "Zaplanowany" i pozwalało obejść blokadę odwoływania/przenoszenia odbytych treningów.
+            if (wasCompleted && newEndDate.HasValue && newEndDate.Value >= now) return false;
+
             workout.Title = model.Title;
             workout.Description = model.Description;
             workout.StartDate = model.StartDate;
-            // Brak godziny zakończenia traktujemy tak samo jak przy dodawaniu treningu: domyślnie 1 godzina.
-            workout.EndDate = model.EndDate ?? model.StartDate.AddHours(1);
+            workout.EndDate = newEndDate;
 
             // Po zmianie terminu przypomnienie musi zostać wysłane ponownie - dla nowej daty.
             if (startDateChanged) workout.IsReminderSent = false;

@@ -115,7 +115,7 @@ namespace AplikacjaNaSiłownię.Services
                 // KROK: Usunięcie fizycznego pliku zdjęcia profilowego z dysku serwera (zapobieganie zaśmiecaniu).
                 // Robimy to dopiero PO zatwierdzeniu transakcji - pliku nie da się "wycofać", więc przy rollbacku
                 // konto zostałoby w bazie ze ścieżką do nieistniejącego zdjęcia.
-                DeleteProfilePictureFile(user.ProfilePicturesPath);
+                DeleteProfilePictureFile(_webHostEnvironment.WebRootPath, user.ProfilePicturesPath);
 
                 return true;
             }
@@ -127,13 +127,13 @@ namespace AplikacjaNaSiłownię.Services
             }
         }
 
-        private void DeleteProfilePictureFile(string? fileName)
+        private void DeleteProfilePictureFile(string webRootPath, string? fileName)
         {
             if (string.IsNullOrEmpty(fileName)) return;
 
             try
             {
-                var filePath = System.IO.Path.Combine(_webHostEnvironment.WebRootPath, "uploads", "profiles", fileName);
+                var filePath = System.IO.Path.Combine(webRootPath, "uploads", "profiles", fileName);
                 if (System.IO.File.Exists(filePath))
                 {
                     System.IO.File.Delete(filePath);
@@ -141,7 +141,7 @@ namespace AplikacjaNaSiłownię.Services
             }
             catch (Exception ex)
             {
-                // Konto jest już usunięte - osierocony plik nie może zmienić wyniku operacji, więc tylko go logujemy.
+                // Zmiany w bazie są już zapisane - osierocony plik nie może zmienić wyniku operacji, więc tylko go logujemy.
                 _logger.LogWarning(ex, "Nie udało się usunąć pliku zdjęcia profilowego {FileName}", fileName);
             }
         }
@@ -359,16 +359,14 @@ namespace AplikacjaNaSiłownię.Services
                 await file.CopyToAsync(stream);
             }
 
-            // 7. SPRZĄTANIE: Usuwamy poprzednie zdjęcie użytkownika, aby nie marnować miejsca.
-            if (!string.IsNullOrEmpty(user.ProfilePicturesPath))
-            {
-                var oldPath = Path.Combine(webRootPath, "uploads", "profiles", user.ProfilePicturesPath);
-                if (File.Exists(oldPath)) File.Delete(oldPath);
-            }
-
-            // 8. BAZA DANYCH: Przypisujemy nową nazwę pliku do profilu i zapisujemy zmiany.
+            // 7. BAZA DANYCH: Przypisujemy nową nazwę pliku do profilu i zapisujemy zmiany.
+            var oldFileName = user.ProfilePicturesPath;
             user.ProfilePicturesPath = uniqueFileName;
             var result = await _userManager.UpdateAsync(user);
+
+            // 8. SPRZĄTANIE: Plik usuwamy dopiero PO zapisie w bazie (tak samo jak przy usuwaniu konta).
+            // Sukces -> znika stare zdjęcie. Błąd -> znika nowo wgrany plik, a profil nadal wskazuje na istniejące stare zdjęcie.
+            DeleteProfilePictureFile(webRootPath, result.Succeeded ? oldFileName : uniqueFileName);
 
             return result.Succeeded;
         }

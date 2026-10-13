@@ -271,12 +271,13 @@ namespace AplikacjaNaSiłownię.Controllers
         public async Task<IActionResult> SaveWorkout([FromBody] WorkoutDto model)
         {
             // ClientId jest wymagany, bo trener wybiera klienta, któremu planuje trening.
-            if (string.IsNullOrEmpty(model.ClientId))
+            // Przy pustym lub błędnym JSON-ie model jest null (ModelState zawiera już wtedy błąd), więc nie wolno go tu dereferencjonować.
+            if (model is not null && string.IsNullOrEmpty(model.ClientId))
             {
                 ModelState.AddModelError(nameof(model.ClientId), "Nie wskazano klienta.");
             }
 
-            if (!ModelState.IsValid)
+            if (model is null || !ModelState.IsValid)
             {
                 var errors = string.Join(" ", ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage));
                 return Json(new { success = false, message = errors });
